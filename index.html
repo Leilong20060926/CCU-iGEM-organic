@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>有心良食 TrueHarvest｜有機與友善農產品查詢</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F1E4;
+  --paper-deep:#ECE5D2;
+  --ink:#2B2620;
+  --ink-soft:#6B6154;
+  --line:#DED2B4;
+  --surface:#FCFAF2;
+
+  --organic:#3B6E4F;
+  --organic-soft:#E3EFE5;
+  --friendly:#BE7A2E;
+  --friendly-soft:#F6EBD9;
+  --both:#2F6F6E;
+  --both-soft:#E1EEED;
+
+  --seal:#A6402C;
+  --seal-soft:#F2E1DA;
+
+  --rice:#C99A3B;
+  --grain:#8A7B3C;
+  --veg:#3B6E4F;
+  --fruit:#C1552E;
+  --processed:#6C4E8C;
+  --other:#5E6B6B;
+
+  --radius-card:14px;
+  --shadow:0 6px 18px rgba(43,38,32,.10);
+}
+*{box-sizing:border-box;}
+html{
+  scrollbar-gutter:stable;
+  overflow-y:scroll;
+}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper-deep);
+  color:var(--ink);
+  font-family:'Noto Sans TC','Noto Sans',sans-serif;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+h1,h2,h3,.display{font-family:'Noto Serif TC',serif;}
+.mono{font-family:'JetBrains Mono',monospace;}
+a{color:inherit;text-decoration:none;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+img,svg{display:block;}
+.hide{display:none !important;}
+
+/* ---------- layout shell ---------- */
+/* Fixed page frame: keeps banner / content / footer aligned to the exact
+   same column on every page, regardless of how short or long the content is,
+   so desktop viewing has one consistent position rather than content
+   floating loosely in the middle of a wide screen. */
+#app{
+  min-height:100vh;display:flex;flex-direction:column;
+  max-width:1240px;margin:0 auto;background:var(--paper);
+  box-shadow:0 0 60px rgba(43,38,32,.08);
+}
+.container{max-width:1080px;margin:0 auto;padding:0 32px;width:100%;}
+@media (max-width:720px){
+  .container{padding:0 18px;}
+  .banner-inner{padding:12px 18px;}
+}
+
+/* ---------- banner ---------- */
+.banner{
+  position:sticky;top:0;z-index:60;
+  background:linear-gradient(180deg,var(--paper) 0%,var(--paper) 92%,rgba(245,241,228,0));
+  background-color:var(--paper);
+  border-bottom:1px solid var(--line);
+}
+.banner-inner{
+  max-width:1080px;margin:0 auto;padding:14px 32px;
+  display:flex;align-items:center;gap:18px;
+}
+.brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;}
+.brand .name{line-height:1.05;}
+.brand .name .zh{font-size:19px;font-weight:700;display:block;}
+.brand .name .en{font-size:10.5px;letter-spacing:.14em;color:var(--ink-soft);text-transform:uppercase;}
+
+.seal{
+  width:42px;height:42px;border-radius:50%;
+  border:2.5px solid var(--seal);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;flex:0 0 auto;
+  transform:rotate(-6deg);
+  color:var(--seal);
+  font-family:'Noto Serif TC',serif;font-weight:900;font-size:16px;
+  box-shadow:inset 0 0 0 2px rgba(166,64,44,.18);
+}
+.seal::after{
+  content:'';position:absolute;inset:-5px;border-radius:50%;
+  border:1px dashed rgba(166,64,44,.45);
+}
+
+.banner-links{display:flex;align-items:center;gap:4px;margin-left:auto;flex-wrap:wrap;}
+.banner-links button, .banner-links .navlink{
+  font-size:14px;padding:8px 12px;border-radius:20px;color:var(--ink-soft);
+  white-space:nowrap;
+}
+.banner-links button:hover,.banner-links .navlink:hover{background:var(--paper-deep);color:var(--ink);}
+.icon-btn{
+  width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border:1px solid var(--line);
+}
+.icon-btn:hover{background:var(--paper-deep);}
+.lang-toggle{
+  font-size:12px;font-weight:700;letter-spacing:.05em;
+  border:1px solid var(--line);border-radius:20px;padding:7px 12px;background:var(--surface);
+}
+
+.search-wrap{position:relative;}
+.search-bar{position:relative;display:flex;align-items:center;}
+.search-bar .icon{position:absolute;left:13px;font-size:13px;color:var(--ink-soft);pointer-events:none;}
+.search-input{
+  width:190px;padding:9px 14px 9px 34px;border-radius:24px;border:1.5px solid var(--line);
+  background:var(--surface);font-size:13.5px;color:var(--ink);
+}
+.search-input::placeholder{color:var(--ink-soft);}
+.search-input:focus{outline:none;border-color:var(--both);box-shadow:0 0 0 3px var(--both-soft);}
+@media (max-width:640px){
+  .search-input{width:120px;}
+}
+.search-panel{
+  position:absolute;top:48px;right:0;width:min(360px,88vw);
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow);padding:10px;z-index:70;
+}
+.search-results{margin-top:8px;max-height:300px;overflow:auto;}
+.search-result-item{
+  display:flex;gap:10px;align-items:center;padding:8px 6px;border-radius:8px;
+}
+.search-result-item:hover{background:var(--paper-deep);}
+.search-empty{font-size:13px;color:var(--ink-soft);padding:8px 6px;}
+
+/* ---------- main ---------- */
+main{flex:1;padding:26px 0 60px;}
+
+.crumb-back{
+  display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-soft);
+  padding:6px 4px;margin-bottom:14px;
+}
+.crumb-back:hover{color:var(--ink);}
+
+.page-title{font-size:26px;font-weight:700;margin:2px 0 4px;}
+.page-sub{font-size:13px;color:var(--ink-soft);margin:0 0 22px;}
+
+/* ---------- home hero ---------- */
+.hero{
+  display:flex;align-items:center;justify-content:space-between;gap:26px;
+  padding:26px 0 30px;border-bottom:1px solid var(--line);margin-bottom:26px;flex-wrap:wrap;
+}
+.hero-copy h1{font-size:clamp(26px,4vw,38px);margin:0 0 10px;line-height:1.25;}
+.hero-copy p{font-size:14.5px;color:var(--ink-soft);max-width:480px;margin:0;}
+.hero-stamp{
+  width:118px;height:118px;border-radius:50%;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  border:3px solid var(--seal);color:var(--seal);transform:rotate(6deg);
+  font-family:'Noto Serif TC',serif;font-weight:900;font-size:15px;line-height:1.3;
+  position:relative;
+}
+.hero-stamp::after{content:'';position:absolute;inset:-7px;border-radius:50%;border:1px dashed rgba(166,64,44,.4);}
+
+.map-cta{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  background:var(--both-soft);border:1px solid var(--both);border-radius:var(--radius-card);
+  padding:16px 20px;margin-bottom:30px;
+}
+.map-cta .t1{font-weight:700;font-size:15.5px;}
+.map-cta .t2{font-size:12.5px;color:var(--ink-soft);}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:22px;
+  background:var(--ink);color:var(--paper);font-size:14px;font-weight:600;white-space:nowrap;
+}
+.btn:hover{opacity:.88;}
+.btn.outline{background:transparent;color:var(--both);border:1.5px solid var(--both);}
+
+/* ---------- grids ---------- */
+.section-label{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 12px;font-weight:700;}
+.grid{display:grid;gap:16px;}
+.grid.cat{grid-template-columns:repeat(3,1fr);}
+.grid.sub{grid-template-columns:repeat(4,1fr);}
+.grid.prod{grid-template-columns:repeat(4,1fr);}
+@media (max-width:860px){
+  .grid.cat{grid-template-columns:repeat(2,1fr);}
+  .grid.sub{grid-template-columns:repeat(3,1fr);}
+  .grid.prod{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width:520px){
+  .grid.cat{grid-template-columns:repeat(2,1fr);}
+  .grid.sub{grid-template-columns:repeat(2,1fr);}
+  .grid.prod{grid-template-columns:repeat(2,1fr);}
+  .banner-links .navlink.hide-mobile{display:none;}
+}
+
+.tile{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-card);
+  padding:18px 14px;text-align:center;position:relative;overflow:hidden;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.tile:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+.tile .icon{font-size:34px;margin-bottom:8px;}
+.tile .zh{font-weight:700;font-size:14.5px;}
+.tile .en{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;}
+.tile .catbar{position:absolute;left:0;top:0;bottom:0;width:5px;}
+.tile.optional::before{
+  content:attr(data-opt);position:absolute;top:8px;right:10px;font-size:9.5px;color:var(--ink-soft);
+  background:var(--paper-deep);padding:2px 6px;border-radius:8px;
+}
+
+.tag{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+  padding:3px 9px;border-radius:20px;letter-spacing:.02em;
+}
+.tag.organic{background:var(--organic-soft);color:var(--organic);}
+.tag.friendly{background:var(--friendly-soft);color:var(--friendly);}
+.tag.both{background:var(--both-soft);color:var(--both);}
+.tag-dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+
+.prod-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-card);
+  padding:14px;position:relative;
+}
+.prod-card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+.prod-card .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.prod-card .icon{font-size:30px;}
+.prod-card .zh{font-weight:700;font-size:14.5px;margin:2px 0 1px;}
+.prod-card .en{font-size:10.5px;color:var(--ink-soft);}
+.prod-card .price{font-size:13px;margin-top:8px;font-weight:600;}
+.prod-card .vendor{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+
+.filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-chip{
+  padding:7px 14px;border-radius:20px;border:1px solid var(--line);font-size:12.5px;font-weight:600;
+  background:var(--surface);color:var(--ink-soft);
+}
+.filter-chip.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+/* ---------- product detail (game-card style) ---------- */
+.detail-wrap{display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start;}
+.game-card{
+  width:320px;flex:0 0 320px;background:var(--surface);
+  border:3px solid var(--ink);border-radius:22px;padding:0;overflow:hidden;
+  box-shadow:8px 8px 0 rgba(43,38,32,.12);
+}
+.game-card .head{
+  background:var(--ink);color:var(--paper);padding:14px 18px;text-align:center;
+}
+.game-card .head .zh{font-family:'Noto Serif TC',serif;font-size:19px;font-weight:700;}
+.game-card .head .en{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;opacity:.75;}
+.game-card .art{
+  height:140px;display:flex;align-items:center;justify-content:center;font-size:64px;
+  background:repeating-linear-gradient(135deg,var(--paper-deep),var(--paper-deep) 10px, var(--paper) 10px, var(--paper) 20px);
+  border-bottom:2px dashed var(--line);position:relative;
+}
+.game-card .tagrow{position:absolute;top:10px;left:10px;display:flex;gap:6px;}
+.game-card .body{padding:16px 18px 18px;}
+.stat-line{display:flex;justify-content:space-between;font-size:12.5px;padding:7px 0;border-bottom:1px dashed var(--line);}
+.stat-line:last-child{border-bottom:none;}
+.stat-line .k{color:var(--ink-soft);}
+.stat-line .v{font-weight:700;text-align:right;}
+
+.info-col{flex:1 1 380px;min-width:280px;}
+.info-block{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-card);
+  padding:18px 20px;margin-bottom:16px;
+}
+.info-block h3{font-size:14px;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+.cert-seal{
+  width:30px;height:30px;border-radius:50%;border:2px solid var(--seal);color:var(--seal);
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;transform:rotate(-8deg);
+}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:8px 10px;font-size:13px;}
+.kv .k{color:var(--ink-soft);}
+.kv .v{font-weight:600;}
+.trace-code{
+  display:inline-block;margin-top:4px;padding:5px 10px;background:var(--paper-deep);border-radius:6px;
+  font-size:12.5px;letter-spacing:.02em;
+}
+.season-strip{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;margin-top:6px;}
+.season-cell{
+  aspect-ratio:1;border-radius:5px;background:var(--paper-deep);display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;color:var(--ink-soft);
+}
+.season-cell.on{background:var(--organic);color:#fff;font-weight:700;}
+.pct-bar{height:10px;border-radius:6px;background:var(--paper-deep);overflow:hidden;margin-top:6px;}
+.pct-bar-fill{height:100%;background:var(--processed);}
+.vendor-link{
+  display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--both);
+  border-bottom:1.5px dashed var(--both);padding-bottom:1px;
+}
+.mini-map-btn{
+  display:flex;align-items:center;gap:12px;background:var(--paper-deep);border-radius:10px;padding:12px 14px;
+  cursor:pointer;
+}
+.mini-map-btn:hover{background:var(--line);}
+
+/* ---------- map page ---------- */
+.map-layout{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;}
+.map-svg-wrap{
+  flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-card);
+  padding:14px;position:relative;
+}
+.map-caption{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:6px;}
+.marker{cursor:pointer;}
+.marker circle.pulse{opacity:.35;}
+.marker:hover circle.dot{stroke:var(--ink);stroke-width:1.5px;}
+.map-legend{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);}
+.legend-dot{width:10px;height:10px;border-radius:50%;}
+.vendor-list{flex:1 1 320px;min-width:280px;}
+.vendor-row{
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.vendor-row.highlight{border-color:var(--seal);box-shadow:0 0 0 2px var(--seal-soft);}
+.vendor-row .name{font-weight:700;font-size:13.5px;}
+.vendor-row .county{font-size:11.5px;color:var(--ink-soft);}
+.vendor-row .products{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+.gmap-link{font-size:12px;color:var(--both);font-weight:700;white-space:nowrap;}
+
+/* ---------- vendor page ---------- */
+.vendor-header{display:flex;gap:16px;align-items:center;margin-bottom:20px;}
+.vendor-avatar{
+  width:64px;height:64px;border-radius:50%;background:var(--organic-soft);color:var(--organic);
+  display:flex;align-items:center;justify-content:center;font-size:26px;flex:0 0 auto;
+}
+
+/* ---------- about / info pages ---------- */
+.prose{max-width:640px;font-size:14.5px;line-height:1.9;color:var(--ink-soft);}
+.prose h3{color:var(--ink);font-size:15.5px;margin:22px 0 8px;}
+.prose a{color:var(--both);font-weight:700;}
+.link-card{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:10px 0;
+}
+
+footer{border-top:1px solid var(--line);padding:22px 0;text-align:center;font-size:11.5px;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="banner"><div class="banner-inner" id="bannerInner"></div></header>
+  <main class="container" id="main"></main>
+  <footer id="footerBox"></footer>
+</div>
+
+<script>
+/* ======================================================================
+   DATA
+   ====================================================================== */
+const STR = {
+  appNameZh:"有心良食", appNameEn:"TrueHarvest",
+  tagline:{zh:"看得見的耕作，吃得到的用心", en:"Farming you can see, care you can taste"},
+  heroP:{zh:"查詢全台有機與友善農糧產品的驗證資訊、產季與販售地點，讓每一次採買都吃得安心、買得明白。", en:"Look up certification, season and sale points for organic & friendly farm products across Taiwan."},
+  heroStamp:{zh:"有機・友善<br/>雙認證",en:"ORGANIC<br/>&amp; FRIENDLY"},
+  info:{zh:"相關資訊", en:"Info"},
+  about:{zh:"關於我們", en:"About"},
+  search:{zh:"搜尋", en:"Search"},
+  searchPh:{zh:"輸入農產品名稱搜尋…", en:"Search by product name…"},
+  home:{zh:"首頁", en:"Home"},
+  mapNav:{zh:"地圖", en:"Map"},
+  categories:{zh:"農糧產品之大分類", en:"Product categories"},
+  goMap:{zh:"查看全台販售地圖", en:"View nationwide map"},
+  goMapSub:{zh:"看看住家附近哪裡買得到有機／友善農產品", en:"Find organic & friendly vendors near you"},
+  viewMap:{zh:"開啟地圖 →", en:"Open map →"},
+  back:{zh:"返回上一頁", en:"Back"},
+  backHome:{zh:"回首頁", en:"Back to home"},
+  optional:{zh:"選用類別", en:"optional"},
+  all:{zh:"全部", en:"All"},
+  organic:{zh:"有機", en:"Organic"},
+  friendly:{zh:"友善", en:"Friendly"},
+  both:{zh:"有機＋友善", en:"Organic + Friendly"},
+  noResult:{zh:"找不到符合的農產品", en:"No matching products"},
+  subcatTitle:{zh:"選擇細項分類", en:"Choose a sub-category"},
+  productsIn:{zh:"項農產品", en:"products"},
+  vendor:{zh:"經營者", en:"Vendor"},
+  certBlock:{zh:"驗證證書", en:"Certification"},
+  certNo:{zh:"證書字號", en:"Cert. No."},
+  certAgency:{zh:"驗證機構", en:"Certifying body"},
+  certExpiry:{zh:"有效期限", en:"Valid until"},
+  traceCode:{zh:"追溯碼", en:"Traceability code"},
+  traceNote:{zh:"確認生產、加工到分裝來源，確保有機完整性", en:"Confirms origin through production, processing & packaging"},
+  price:{zh:"參考售價", en:"Reference price"},
+  season:{zh:"產季", en:"Season"},
+  processedPct:{zh:"有機成分比例", en:"Organic content ratio"},
+  mapBlock:{zh:"販售地點", en:"Where to buy"},
+  mapBlockSub:{zh:"點擊查看全台販售此產品的地點", en:"Tap to see all sale locations nationwide"},
+  vendorInfoTitle:{zh:"業者資訊", en:"Vendor info"},
+  phone:{zh:"聯絡電話", en:"Phone"},
+  address:{zh:"地址", en:"Address"},
+  certifiedSince:{zh:"驗證起始", en:"Certified since"},
+  otherProducts:{zh:"該業者其他農產品", en:"Other products from this vendor"},
+  mapTitle:{zh:"全台有機／友善農產品販售地圖", en:"Nationwide vendor map"},
+  mapSub:{zh:"簡化示意地圖，非精確比例；顏色代表農產品類別", en:"Simplified schematic map, not to scale. Colors indicate product category."},
+  vendorListTitle:{zh:"店家清單", en:"Vendor list"},
+  openGmap:{zh:"開啟 Google 地圖 →", en:"Open in Google Maps →"},
+  aboutTitle:{zh:"關於我們", en:"About us"},
+  aboutBody:{zh:"「有心良食」致力於彙整全台通過有機或友善耕作驗證的農糧產品資訊，串連生產者、驗證機構與消費者，讓有機與友善農業被更多人看見、被更方便地選擇。", en:"TrueHarvest brings together certified organic & friendly-farming product data from across Taiwan, connecting growers, certifiers and shoppers."},
+  infoTitle:{zh:"相關資訊", en:"Related info"},
+  infoBody:{zh:"以下資料庫與連結，提供本平台資料來源與延伸閱讀：", en:"Sources and further reading used by this platform:"},
+  dbName:{zh:"有機農產品全國資訊網（農糧署）", en:"National Organic Product Information Network"},
+  footer:{zh:"© 有心良食 TrueHarvest － 介面設計原型，資料僅供示意", en:"© TrueHarvest — interface prototype, sample data only"}
+};
+function t(key){ return STR[key][state.lang]; }
+function tv(obj){ return obj[state.lang]; }
+
+// six top-level categories
+const CATS = [
+  {id:"rice", icon:"🌾", zh:"米類", en:"Rice", color:"var(--rice)", optional:false, hasSub:false,
+    desc:{zh:"包括稻穀、糙米、白米等水稻及陸稻產品", en:"Paddy, brown & white rice from wet/dry cultivation"}},
+  {id:"grain", icon:"🌽", zh:"雜糧及特用作物類", en:"Grains & Special Crops", color:"var(--grain)", optional:false, hasSub:true,
+    desc:{zh:"雜糧與特用作物", en:"Grains and special-use crops"}},
+  {id:"veg", icon:"🥬", zh:"蔬菜類", en:"Vegetables", color:"var(--veg)", optional:false, hasSub:true,
+    desc:{zh:"葉菜、根莖、花果、菇蕈等", en:"Leafy, root, flower/fruit & fungi vegetables"}},
+  {id:"fruit", icon:"🍊", zh:"水果類", en:"Fruits", color:"var(--fruit)", optional:false, hasSub:true,
+    desc:{zh:"漿果、柑桔、核果、瓜果等", en:"Berries, citrus, stone fruit, melons"}},
+  {id:"processed", icon:"🫙", zh:"農糧加工品類", en:"Processed Products", color:"var(--processed)", optional:true, hasSub:false,
+    desc:{zh:"利用農糧產品加工製成之產品", en:"Products made from processed farm produce"}},
+  {id:"other", icon:"🌿", zh:"其他", en:"Other", color:"var(--other)", optional:true, hasSub:false,
+    desc:{zh:"牧草、花卉與觀賞植物等", en:"Forage grass, flowers & ornamental plants"}},
+];
+
+const SUBS = {
+  grain: [
+    {id:"staple", zh:"雜糧", en:"Staple grains", icon:"🌽"},
+    {id:"special", zh:"特用作物", en:"Special crops", icon:"🍵"},
+  ],
+  veg: [
+    {id:"leafwrap", zh:"包葉菜", en:"Head vegetables", icon:"🥬"},
+    {id:"leaf", zh:"葉菜", en:"Leafy greens", icon:"🥗"},
+    {id:"root", zh:"根莖菜", en:"Root vegetables", icon:"🥕"},
+    {id:"flowerfruit", zh:"花菜／果菜／豆菜", en:"Flower / fruit / bean veg", icon:"🍅"},
+    {id:"fungisprout", zh:"蕈菜／芽菜", en:"Mushrooms & sprouts", icon:"🍄"},
+  ],
+  fruit: [
+    {id:"berry", zh:"大／小漿果", en:"Berries", icon:"🍇"},
+    {id:"citrus", zh:"柑桔類", en:"Citrus", icon:"🍊"},
+    {id:"stonepome", zh:"核果與梨果類", en:"Stone & pome fruit", icon:"🍎"},
+    {id:"melon", zh:"瓜果類", en:"Melons", icon:"🍉"},
+  ],
+};
+
+const VENDORS = [
+  {id:"v1", zh:"青禾有機農場", en:"Qing-He Organic Farm", county:{zh:"台中市",en:"Taichung"}, x:112,y:214, phone:"04-2312-8877", addr:{zh:"台中市大雅區稻香路12號", en:"No.12, Daoxiang Rd, Daya Dist., Taichung"}},
+  {id:"v2", zh:"日光友善耕作", en:"Sunlight Friendly Farming", county:{zh:"彰化縣",en:"Changhua"}, x:97,y:233, phone:"04-838-2210", addr:{zh:"彰化縣溪州鄉中山路88號", en:"No.88, Zhongshan Rd, Xizhou Township, Changhua"}},
+  {id:"v3", zh:"埔心果樹合作社", en:"Puxin Orchard Co-op", county:{zh:"南投縣",en:"Nantou"}, x:132,y:243, phone:"049-233-1567", addr:{zh:"南投縣魚池鄉香菇路5號", en:"No.5, Xianggu Rd, Yuchi Township, Nantou"}},
+  {id:"v4", zh:"雲田米坊", en:"Yuntian Rice House", county:{zh:"雲林縣",en:"Yunlin"}, x:101,y:270, phone:"05-696-1122", addr:{zh:"雲林縣崙背鄉良田路20號", en:"No.20, Liangtian Rd, Lunbei Township, Yunlin"}},
+  {id:"v5", zh:"嘉禾友善蔬果園", en:"Jiahe Friendly Orchard", county:{zh:"嘉義縣",en:"Chiayi"}, x:96,y:308, phone:"05-362-7788", addr:{zh:"嘉義縣朴子市果菜街3號", en:"No.3, Guocai St, Puzi City, Chiayi"}},
+  {id:"v6", zh:"府城草本茶園", en:"Fucheng Herbal Tea Garden", county:{zh:"台南市",en:"Tainan"}, x:106,y:378, phone:"06-573-4400", addr:{zh:"台南市白河區蓮花路9號", en:"No.9, Lianhua Rd, Baihe Dist., Tainan"}},
+  {id:"v7", zh:"旗山有機蕉園", en:"Qishan Organic Banana Farm", county:{zh:"高雄市",en:"Kaohsiung"}, x:117,y:436, phone:"07-661-5533", addr:{zh:"高雄市旗山區蕉城路17號", en:"No.17, Jiaocheng Rd, Qishan Dist., Kaohsiung"}},
+  {id:"v8", zh:"屏東瓜果之家", en:"Pingtung Melon House", county:{zh:"屏東縣",en:"Pingtung"}, x:132,y:494, phone:"08-778-2244", addr:{zh:"屏東縣萬丹鄉瓜園路6號", en:"No.6, Guayuan Rd, Wandan Township, Pingtung"}},
+  {id:"v9", zh:"太平洋海岸果園", en:"Pacific Coast Orchard", county:{zh:"花蓮縣",en:"Hualien"}, x:178,y:266, phone:"03-865-9911", addr:{zh:"花蓮縣壽豐鄉海岸路2號", en:"No.2, Haian Rd, Shoufeng Township, Hualien"}},
+  {id:"v10", zh:"縱谷友善農園", en:"Rift Valley Friendly Farm", county:{zh:"台東縣",en:"Taitung"}, x:158,y:396, phone:"089-322-556", addr:{zh:"台東縣池上鄉縱谷路33號", en:"No.33, Zonggu Rd, Chishang Township, Taitung"}},
+  {id:"v11", zh:"蘭陽友善菜園", en:"Lanyang Friendly Vegetable Farm", county:{zh:"宜蘭縣",en:"Yilan"}, x:188,y:96, phone:"03-923-4488", addr:{zh:"宜蘭縣三星鄉蔥仔路1號", en:"No.1, Congzai Rd, Sanxing Township, Yilan"}},
+  {id:"v12", zh:"北市樂活市集", en:"Taipei LOHAS Market", county:{zh:"台北市",en:"Taipei"}, x:152,y:52, phone:"02-2758-3391", addr:{zh:"台北市信義區樂活路50號", en:"No.50, Lehuo Rd, Xinyi Dist., Taipei"}},
+];
+function vendorOf(id){ return VENDORS.find(v=>v.id===id); }
+
+// helper for cert agencies
+const AGENCIES = [
+  {zh:"慈心有機驗證",en:"TOAF Organic Certification"},
+  {zh:"中華有機農業協會",en:"COAA"},
+  {zh:"暐凱國際檢驗", en:"FSI Inspection"},
+  {zh:"台灣友善耕作協會", en:"Taiwan Friendly Farming Assoc."},
+];
+
+let PID = 0;
+function mkProduct(cat, sub, zh, en, tag, icon, vendorId, price, unit, season, agencyIdx, processedPct){
+  PID++;
+  const ag = AGENCIES[agencyIdx % AGENCIES.length];
+  const y = 2024 + (PID % 3);
+  return {
+    id:"p"+PID, cat, sub, tag, icon,
+    name:{zh, en}, vendorId,
+    price, unit:{zh:unit.zh, en:unit.en},
+    season,
+    cert:{no:"ORG-TW-"+(1000+PID), agency:ag, expiry:(y+2)+"-"+String(((PID*7)%12)+1).padStart(2,'0')+"-"+String(((PID*3)%28)+1).padStart(2,'0')},
+    trace:"TW-"+cat.toUpperCase().slice(0,3)+"-"+y+"-"+String(100000+PID*37).slice(-6),
+    processedPct: processedPct || null,
+  };
+}
+const M = [1,2,3,4,5,6,7,8,9,10,11,12];
+const P = [];
+// rice
+P.push(mkProduct("rice",null,"越光糙米","Koshihikari Brown Rice","organic","🌾","v4",180,{zh:"元／台斤",en:"NT$/600g"},[9,10,11,12],0));
+P.push(mkProduct("rice",null,"台梗9號白米","Tainung No.9 White Rice","friendly","🍚","v4",120,{zh:"元／台斤",en:"NT$/600g"},[6,7,10,11],1));
+P.push(mkProduct("rice",null,"黑糯米","Black Glutinous Rice","both","🍙","v11",160,{zh:"元／台斤",en:"NT$/600g"},[10,11],2));
+// grain - staple
+P.push(mkProduct("grain","staple","黃豆","Soybean","organic","🫘","v1",90,{zh:"元／台斤",en:"NT$/600g"},[9,10,11],0));
+P.push(mkProduct("grain","staple","紅豆","Adzuki Bean","friendly","🫘","v5",110,{zh:"元／台斤",en:"NT$/600g"},[11,12,1],1));
+// grain - special
+P.push(mkProduct("grain","special","高山烏龍茶葉","High-mountain Oolong Tea","organic","🍵","v6",680,{zh:"元／150g",en:"NT$/150g"},[4,5,10,11],3));
+P.push(mkProduct("grain","special","仙草","Mesona (Grass Jelly Herb)","friendly","🌿","v6",95,{zh:"元／台斤",en:"NT$/600g"},[8,9],2));
+// veg leafwrap
+P.push(mkProduct("veg","leafwrap","高麗菜","Cabbage","organic","🥬","v2",45,{zh:"元／顆",en:"NT$/head"},[11,12,1,2],0));
+P.push(mkProduct("veg","leafwrap","結球白菜","Napa Cabbage","both","🥬","v2",40,{zh:"元／顆",en:"NT$/head"},[11,12,1],1));
+// veg leaf
+P.push(mkProduct("veg","leaf","小白菜","Bok Choy","organic","🥗","v2",35,{zh:"元／把",en:"NT$/bunch"},M,2));
+P.push(mkProduct("veg","leaf","菠菜","Spinach","friendly","🥗","v5",38,{zh:"元／把",en:"NT$/bunch"},[10,11,12,1,2],3));
+// veg root
+P.push(mkProduct("veg","root","紅蘿蔔","Carrot","organic","🥕","v1",30,{zh:"元／台斤",en:"NT$/600g"},[12,1,2,3],0));
+P.push(mkProduct("veg","root","白蘿蔔","Daikon Radish","friendly","🥕","v1",28,{zh:"元／台斤",en:"NT$/600g"},[11,12,1],1));
+// veg flowerfruit
+P.push(mkProduct("veg","flowerfruit","牛番茄","Beefsteak Tomato","both","🍅","v3",55,{zh:"元／台斤",en:"NT$/600g"},[12,1,2,3,4],2));
+P.push(mkProduct("veg","flowerfruit","毛豆","Edamame","organic","🌱","v1",60,{zh:"元／台斤",en:"NT$/600g"},[6,7,8],3));
+// veg fungisprout
+P.push(mkProduct("veg","fungisprout","香菇","Shiitake Mushroom","organic","🍄","v3",150,{zh:"元／台斤",en:"NT$/600g"},M,0));
+P.push(mkProduct("veg","fungisprout","豆芽菜","Bean Sprouts","friendly","🌱","v5",25,{zh:"元／台斤",en:"NT$/600g"},M,1));
+// fruit berry
+P.push(mkProduct("fruit","berry","巨峰葡萄","Kyoho Grape","organic","🍇","v3",180,{zh:"元／台斤",en:"NT$/600g"},[6,7,8],2));
+P.push(mkProduct("fruit","berry","香蕉","Banana","friendly","🍌","v7",35,{zh:"元／台斤",en:"NT$/600g"},M,3));
+// fruit citrus
+P.push(mkProduct("fruit","citrus","茂谷柑","Murcott Tangor","organic","🍊","v6",70,{zh:"元／台斤",en:"NT$/600g"},[12,1,2],0));
+P.push(mkProduct("fruit","citrus","檸檬","Lemon","both","🍋","v6",50,{zh:"元／台斤",en:"NT$/600g"},[7,8,9],1));
+// fruit stonepome
+P.push(mkProduct("fruit","stonepome","愛文芒果","Irwin Mango","organic","🥭","v7",90,{zh:"元／台斤",en:"NT$/600g"},[5,6,7],2));
+P.push(mkProduct("fruit","stonepome","水梨","Asian Pear","friendly","🍐","v9",65,{zh:"元／台斤",en:"NT$/600g"},[8,9],3));
+// fruit melon
+P.push(mkProduct("fruit","melon","西瓜","Watermelon","organic","🍉","v8",25,{zh:"元／台斤",en:"NT$/600g"},[5,6,7],0));
+P.push(mkProduct("fruit","melon","洋香瓜","Cantaloupe","friendly","🍈","v8",60,{zh:"元／台斤",en:"NT$/600g"},[3,4,5],1));
+// processed
+P.push(mkProduct("processed",null,"糙米穀粉","Brown Rice Flour","organic","🫙","v4",220,{zh:"元／500g",en:"NT$/500g"},M,0,92));
+P.push(mkProduct("processed",null,"蔬果乾綜合包","Mixed Dried Veg & Fruit","friendly","🥭","v7",280,{zh:"元／200g",en:"NT$/200g"},M,1,68));
+P.push(mkProduct("processed",null,"烏龍茶包","Oolong Tea Bags","both","🍵","v6",320,{zh:"元／盒",en:"NT$/box"},M,2,85));
+// other
+P.push(mkProduct("other",null,"牧草捆","Forage Grass Bale","friendly","🌾","v10",150,{zh:"元／捆",en:"NT$/bale"},M,0));
+P.push(mkProduct("other",null,"香草盆栽","Herb Potted Plant","organic","🌿","v11",120,{zh:"元／盆",en:"NT$/pot"},M,1));
+
+function productsOf(catId, subId){
+  return P.filter(p=>p.cat===catId && (subId?p.sub===subId:true));
+}
+function catOf(id){ return CATS.find(c=>c.id===id); }
+function subOf(catId,subId){ return (SUBS[catId]||[]).find(s=>s.id===subId); }
+function productById(id){ return P.find(p=>p.id===id); }
+
+function tagLabel(tag){
+  if(tag==="organic") return t("organic");
+  if(tag==="friendly") return t("friendly");
+  return t("both");
+}
+function tagChip(tag){
+  return `<span class="tag ${tag}"><span class="tag-dot"></span>${tagLabel(tag)}</span>`;
+}
+
+/* ======================================================================
+   STATE + ROUTER
+   ====================================================================== */
+let state = { lang:"zh", view:"home", params:{}, searchOpen:false, searchQ:"", highlightVendor:null, filter:"all" };
+
+function nav(view, params){
+  state.view = view; state.params = params||{}; state.searchOpen=false; state.filter="all";
+  window.scrollTo({top:0,behavior:"smooth"});
+  render();
+}
+
+/* ======================================================================
+   RENDER: BANNER
+   ====================================================================== */
+function renderBanner(){
+  const b = document.getElementById("bannerInner");
+  b.innerHTML = `
+    <a href="#" class="brand" onclick="nav('home');return false;">
+      <div class="seal">有</div>
+      <div class="name">
+        <span class="zh">${STR.appNameZh}</span>
+        <span class="en">${STR.appNameEn}</span>
+      </div>
+    </a>
+    <nav class="banner-links">
+      <a href="#" class="navlink hide-mobile" onclick="nav('info');return false;">${t('info')}</a>
+      <a href="#" class="navlink hide-mobile" onclick="nav('about');return false;">${t('about')}</a>
+      <a href="#" class="navlink" onclick="nav('map');return false;">${t('mapNav')}</a>
+      <div class="search-wrap">
+        <div class="search-bar">
+          <span class="icon">🔍</span>
+          <input id="searchInput" class="search-input" type="text" placeholder="${t('searchPh')}" value="${state.searchQ}"
+                 oninput="onSearchInput(this.value)" onfocus="openSearchResults()"
+                 onkeydown="if(event.key==='Enter'){openSearchResults();}"/>
+        </div>
+        <div class="search-panel ${state.searchOpen?'':'hide'}" id="searchPanel">
+          <div class="search-results" id="searchResults"></div>
+        </div>
+      </div>
+      <button class="lang-toggle" onclick="toggleLang()">${state.lang==='zh'?'EN':'中'}</button>
+    </nav>
+  `;
+  if(state.searchOpen) renderSearchResults();
+  document.getElementById("footerBox").innerHTML = `<div class="container">${t('footer')}</div>`;
+}
+function toggleLang(){ state.lang = state.lang==='zh'?'en':'zh'; render(); }
+function openSearchResults(){
+  if(!state.searchOpen){
+    state.searchOpen = true;
+    const q = state.searchQ;
+    render();
+    const el = document.getElementById('searchInput');
+    if(el){ el.value = q; el.focus(); el.setSelectionRange(q.length, q.length); }
+  }
+  renderSearchResults();
+}
+function onSearchInput(v){
+  state.searchQ = v;
+  if(!state.searchOpen){ openSearchResults(); return; }
+  renderSearchResults();
+}
+function renderSearchResults(){
+  const box = document.getElementById("searchResults");
+  if(!box) return;
+  const q = state.searchQ.trim().toLowerCase();
+  if(!q){ box.innerHTML = `<div class="search-empty">${t('searchPh')}</div>`; return; }
+  const results = P.filter(p=> p.name.zh.toLowerCase().includes(q) || p.name.en.toLowerCase().includes(q));
+  if(!results.length){ box.innerHTML = `<div class="search-empty">${t('noResult')}</div>`; return; }
+  box.innerHTML = results.slice(0,8).map(p=>`
+    <a href="#" class="search-result-item" onclick="nav('detail',{id:'${p.id}'});return false;">
+      <span style="font-size:22px;">${p.icon}</span>
+      <span>
+        <div style="font-weight:700;font-size:13.5px;">${p.name.zh} <span style="font-weight:400;color:var(--ink-soft);font-size:11px;">${p.name.en}</span></div>
+        ${tagChip(p.tag)}
+      </span>
+    </a>
+  `).join("");
+}
+document.addEventListener("click", (e)=>{
+  const wrap = document.querySelector(".search-wrap");
+  if(wrap && state.searchOpen && !wrap.contains(e.target)){
+    state.searchOpen = false; render();
+  }
+});
+
+/* ======================================================================
+   RENDER: HOME
+   ====================================================================== */
+function renderHome(){
+  return `
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>${state.lang==='zh'?'找到吃得安心的<br/>在地好食材':'Find trusted local produce<br/>you can feel good about'}</h1>
+        <p>${t('heroP')}</p>
+      </div>
+      <div class="hero-stamp">${tv(STR.heroStamp)}</div>
+    </section>
+
+    <div class="map-cta">
+      <div>
+        <div class="t1">${t('goMap')}</div>
+        <div class="t2">${t('goMapSub')}</div>
+      </div>
+      <a href="#" class="btn" onclick="nav('map');return false;">${t('viewMap')}</a>
+    </div>
+
+    <div class="section-label">${t('categories')}</div>
+    <div class="grid cat">
+      ${CATS.map(c=>`
+        <a href="#" class="tile ${c.optional?'optional':''}" data-opt="${t('optional')}"
+           onclick="nav('${c.hasSub?'sub':'products'}',{cat:'${c.id}'});return false;">
+          <span class="catbar" style="background:${c.color}"></span>
+          <div class="icon">${c.icon}</div>
+          <div class="zh">${c.zh}</div>
+          <div class="en">${c.en}</div>
+        </a>
+      `).join("")}
+    </div>
+  `;
+}
+
+/* ======================================================================
+   RENDER: SUBCATEGORY PAGE
+   ====================================================================== */
+function renderSub(){
+  const cat = catOf(state.params.cat);
+  const subs = SUBS[cat.id] || [];
+  return `
+    <a href="#" class="crumb-back" onclick="nav('home');return false;">← ${t('backHome')}</a>
+    <h2 class="page-title">${cat.zh} <span style="font-weight:400;font-size:15px;color:var(--ink-soft);">${cat.en}</span></h2>
+    <p class="page-sub">${t('subcatTitle')}</p>
+    <div class="grid sub">
+      ${subs.map(s=>`
+        <a href="#" class="tile" onclick="nav('products',{cat:'${cat.id}',sub:'${s.id}'});return false;">
+          <span class="catbar" style="background:${cat.color}"></span>
+          <div class="icon">${s.icon}</div>
+          <div class="zh">${s.zh}</div>
+          <div class="en">${s.en}</div>
+        </a>
+      `).join("")}
+    </div>
+  `;
+}
+
+/* ======================================================================
+   RENDER: PRODUCT LIST
+   ====================================================================== */
+function setFilter(f){ state.filter = f; render(); }
+function renderProducts(){
+  const cat = catOf(state.params.cat);
+  const sub = state.params.sub ? subOf(cat.id, state.params.sub) : null;
+  let list = productsOf(cat.id, state.params.sub);
+  if(state.filter !== "all"){ list = list.filter(p=>p.tag===state.filter); }
+  const backTarget = cat.hasSub ? `nav('sub',{cat:'${cat.id}'})` : `nav('home')`;
+  return `
+    <a href="#" class="crumb-back" onclick="${backTarget};return false;">← ${t('back')}</a>
+    <h2 class="page-title">${sub?sub.zh:cat.zh} <span style="font-weight:400;font-size:15px;color:var(--ink-soft);">${sub?sub.en:cat.en}</span></h2>
+    <p class="page-sub">${list.length} ${t('productsIn')}</p>
+    <div class="filter-row">
+      <button class="filter-chip ${state.filter==='all'?'active':''}" onclick="setFilter('all')">${t('all')}</button>
+      <button class="filter-chip ${state.filter==='organic'?'active':''}" onclick="setFilter('organic')">${t('organic')}</button>
+      <button class="filter-chip ${state.filter==='friendly'?'active':''}" onclick="setFilter('friendly')">${t('friendly')}</button>
+      <button class="filter-chip ${state.filter==='both'?'active':''}" onclick="setFilter('both')">${t('both')}</button>
+    </div>
+    <div class="grid prod">
+      ${list.map(p=>{
+        const v = vendorOf(p.vendorId);
+        return `
+        <a href="#" class="prod-card" onclick="nav('detail',{id:'${p.id}'});return false;">
+          <div class="top">
+            <span class="icon">${p.icon}</span>
+            ${tagChip(p.tag)}
+          </div>
+          <div class="zh">${p.name.zh}</div>
+          <div class="en">${p.name.en}</div>
+          <div class="price">NT$ ${p.price} <span style="font-weight:400;color:var(--ink-soft);font-size:11.5px;">/ ${tv(p.unit)}</span></div>
+          <div class="vendor">${tv(v)}</div>
+        </a>`;
+      }).join("") || `<div class="search-empty">${t('noResult')}</div>`}
+    </div>
+  `;
+}
+
+/* ======================================================================
+   RENDER: PRODUCT DETAIL
+   ====================================================================== */
+function renderDetail(){
+  const p = productById(state.params.id);
+  const v = vendorOf(p.vendorId);
+  const cat = catOf(p.cat);
+  return `
+    <a href="#" class="crumb-back" onclick="nav('products',{cat:'${p.cat}',sub:'${p.sub||''}'});return false;">← ${t('back')}</a>
+    <div class="detail-wrap">
+      <div class="game-card">
+        <div class="head">
+          <div class="zh">${p.name.zh}</div>
+          <div class="en">${p.name.en}</div>
+        </div>
+        <div class="art">
+          <div class="tagrow">${tagChip(p.tag)}</div>
+          ${p.icon}
+        </div>
+        <div class="body">
+          <div class="stat-line"><span class="k">${t('vendor')}</span>
+            <span class="v"><a href="#" class="vendor-link" onclick="nav('vendor',{id:'${v.id}'});return false;">${tv(v)}</a></span></div>
+          <div class="stat-line"><span class="k">${t('price')}</span><span class="v">NT$ ${p.price} / ${tv(p.unit)}</span></div>
+          <div class="stat-line"><span class="k">${t('certExpiry')}</span><span class="v mono">${p.cert.expiry}</span></div>
+        </div>
+      </div>
+
+      <div class="info-col">
+        <div class="info-block">
+          <h3><span class="cert-seal">證</span>${t('certBlock')}</h3>
+          <div class="kv">
+            <div class="k">${t('certNo')}</div><div class="v mono">${p.cert.no}</div>
+            <div class="k">${t('certAgency')}</div><div class="v">${tv(p.cert.agency)}</div>
+            <div class="k">${t('certExpiry')}</div><div class="v mono">${p.cert.expiry}</div>
+          </div>
+        </div>
+
+        <div class="info-block">
+          <h3>🔗 ${t('traceCode')}</h3>
+          <div class="trace-code mono">${p.trace}</div>
+          <p style="font-size:12px;color:var(--ink-soft);margin:10px 0 0;">${t('traceNote')}</p>
+        </div>
+
+        <div class="info-block">
+          <h3>📅 ${t('season')}</h3>
+          <div class="season-strip">
+            ${M.map(m=>`<div class="season-cell ${p.season.includes(m)?'on':''}">${m}</div>`).join("")}
+          </div>
+        </div>
+
+        ${p.processedPct ? `
+        <div class="info-block">
+          <h3>🧪 ${t('processedPct')}</h3>
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;">
+            <span>${p.processedPct}%</span>
+          </div>
+          <div class="pct-bar"><div class="pct-bar-fill" style="width:${p.processedPct}%"></div></div>
+        </div>` : ``}
+
+        <div class="info-block">
+          <h3>📍 ${t('mapBlock')}</h3>
+          <p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px;">${t('mapBlockSub')}</p>
+          <div class="mini-map-btn" onclick="nav('map',{vendor:'${v.id}'})">
+            <span style="font-size:22px;">🗺️</span>
+            <span style="font-size:13px;font-weight:600;">${tv(v.county)} · ${tv(v)}</span>
+            <span style="margin-left:auto;color:var(--both);font-weight:700;font-size:12.5px;">${t('viewMap')}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ======================================================================
+   RENDER: VENDOR
+   ====================================================================== */
+function renderVendor(){
+  const v = vendorOf(state.params.id);
+  const others = P.filter(p=>p.vendorId===v.id);
+  return `
+    <a href="#" class="crumb-back" onclick="history.back();return false;">← ${t('back')}</a>
+    <div class="vendor-header">
+      <div class="vendor-avatar">🌱</div>
+      <div>
+        <h2 class="page-title" style="margin-bottom:2px;">${tv(v)}</h2>
+        <p class="page-sub" style="margin:0;">${tv(v.county)}</p>
+      </div>
+    </div>
+    <div class="info-block">
+      <div class="kv">
+        <div class="k">${t('phone')}</div><div class="v mono">${v.phone}</div>
+        <div class="k">${t('address')}</div><div class="v">${tv(v.addr)}</div>
+      </div>
+    </div>
+    <div class="section-label">${t('otherProducts')}</div>
+    <div class="grid prod">
+      ${others.map(p=>`
+        <a href="#" class="prod-card" onclick="nav('detail',{id:'${p.id}'});return false;">
+          <div class="top"><span class="icon">${p.icon}</span>${tagChip(p.tag)}</div>
+          <div class="zh">${p.name.zh}</div>
+          <div class="en">${p.name.en}</div>
+          <div class="price">NT$ ${p.price} <span style="font-weight:400;color:var(--ink-soft);font-size:11.5px;">/ ${tv(p.unit)}</span></div>
+        </a>
+      `).join("")}
+    </div>
+  `;
+}
+
+/* ======================================================================
+   RENDER: MAP
+   ====================================================================== */
+const LEGEND = [
+  {id:"rice",color:"var(--rice)"},{id:"grain",color:"var(--grain)"},{id:"veg",color:"var(--veg)"},
+  {id:"fruit",color:"var(--fruit)"},{id:"processed",color:"var(--processed)"},{id:"other",color:"var(--other)"},
+];
+function vendorCatColor(vendorId){
+  const cats = [...new Set(P.filter(p=>p.vendorId===vendorId).map(p=>p.cat))];
+  const c = catOf(cats[0]);
+  return c ? c.color : "var(--other)";
+}
+function vendorCats(vendorId){
+  return [...new Set(P.filter(p=>p.vendorId===vendorId).map(p=>p.cat))].map(id=>catOf(id));
+}
+function selectVendor(id){ state.highlightVendor = id; render(); }
+function renderMap(){
+  if(state.params.vendor) state.highlightVendor = state.params.vendor;
+  const islandPath = "M170,18 C205,32 214,58 206,84 C232,120 226,190 202,236 C214,278 202,332 182,368 C190,414 172,470 156,512 C148,548 142,570 137,588 C120,566 100,536 100,504 C82,470 90,432 76,398 C60,362 72,318 62,282 C50,246 66,206 58,166 C74,124 100,84 96,58 C112,36 142,20 170,18 Z";
+  return `
+    <a href="#" class="crumb-back" onclick="nav('home');return false;">← ${t('backHome')}</a>
+    <h2 class="page-title">${t('mapTitle')}</h2>
+    <p class="page-sub">${t('mapSub')}</p>
+    <div class="map-legend">
+      ${LEGEND.map(l=>`<span class="legend-item"><span class="legend-dot" style="background:${l.color}"></span>${catOf(l.id).zh} ${catOf(l.id).en}</span>`).join("")}
+    </div>
+    <div class="map-layout">
+      <div class="map-svg-wrap">
+        <svg width="260" height="620" viewBox="0 0 260 620">
+          <path d="${islandPath}" fill="var(--paper-deep)" stroke="var(--line)" stroke-width="2"/>
+          ${VENDORS.map(v=>{
+            const color = vendorCatColor(v.id);
+            const active = state.highlightVendor===v.id;
+            return `
+            <g class="marker" onclick="selectVendor('${v.id}')">
+              <circle class="pulse" cx="${v.x}" cy="${v.y}" r="${active?13:9}" fill="${color}"></circle>
+              <circle class="dot" cx="${v.x}" cy="${v.y}" r="5.5" fill="${color}" stroke="${active?'var(--ink)':'var(--surface)'}" stroke-width="${active?2:1.5}"></circle>
+            </g>`;
+          }).join("")}
+        </svg>
+        <div class="map-caption">${t('mapSub')}</div>
+      </div>
+      <div class="vendor-list">
+        <div class="section-label">${t('vendorListTitle')}</div>
+        ${VENDORS.map(v=>{
+          const cats = vendorCats(v.id);
+          const gmapQ = encodeURIComponent(tv(v)+" "+tv(v.addr));
+          return `
+          <div class="vendor-row ${state.highlightVendor===v.id?'highlight':''}" onclick="selectVendor('${v.id}')">
+            <div>
+              <div class="name">${tv(v)}</div>
+              <div class="county">${tv(v.county)}</div>
+              <div class="products">${cats.map(c=>c.zh).join("・")}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+              <a href="#" class="gmap-link" onclick="event.stopPropagation();nav('vendor',{id:'${v.id}'});return false;">${t('vendorInfoTitle')} →</a>
+              <a class="gmap-link" href="https://www.google.com/maps/search/?api=1&query=${gmapQ}" target="_blank" rel="noopener" onclick="event.stopPropagation();">${t('openGmap')}</a>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+/* ======================================================================
+   RENDER: ABOUT / INFO
+   ====================================================================== */
+function renderAbout(){
+  return `
+    <a href="#" class="crumb-back" onclick="nav('home');return false;">← ${t('backHome')}</a>
+    <h2 class="page-title">${t('aboutTitle')}</h2>
+    <div class="prose"><p>${t('aboutBody')}</p></div>
+  `;
+}
+function renderInfo(){
+  return `
+    <a href="#" class="crumb-back" onclick="nav('home');return false;">← ${t('backHome')}</a>
+    <h2 class="page-title">${t('infoTitle')}</h2>
+    <div class="prose">
+      <p>${t('infoBody')}</p>
+      <div class="link-card">
+        <span>${t('dbName')}</span>
+        <a href="https://epv.afa.gov.tw/" target="_blank" rel="noopener" class="gmap-link">epv.afa.gov.tw →</a>
+      </div>
+    </div>
+  `;
+}
+
+/* ======================================================================
+   MAIN RENDER
+   ====================================================================== */
+function render(){
+  renderBanner();
+  const main = document.getElementById("main");
+  switch(state.view){
+    case "home": main.innerHTML = renderHome(); break;
+    case "sub": main.innerHTML = renderSub(); break;
+    case "products": main.innerHTML = renderProducts(); break;
+    case "detail": main.innerHTML = renderDetail(); break;
+    case "vendor": main.innerHTML = renderVendor(); break;
+    case "map": main.innerHTML = renderMap(); break;
+    case "about": main.innerHTML = renderAbout(); break;
+    case "info": main.innerHTML = renderInfo(); break;
+    default: main.innerHTML = renderHome();
+  }
+}
+render();
+</script>
+</body>
+</html>
