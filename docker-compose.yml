@@ -1,0 +1,21 @@
+services:
+  server:
+    image: lk152/organic-server:latest
+    build: ./server
+    environment:
+      - PORT=3000
+    volumes:
+      - geocode-cache:/app/cache
+    restart: unless-stopped
+
+  client:
+    image: lk152/organic-client:latest
+    build: ./client
+    ports:
+      - "8090:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  geocode-cache:

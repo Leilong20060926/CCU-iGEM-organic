@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #EDE8D8;
+  --color-paper-deep: #E2DBC4;
+  --color-ink: #332C1C;
+  --color-ink-soft: #8A7E5E;
+  --color-line: #DCD2AE;
+  --color-surface: #F6F2E4;
+
+  --color-organic: #7A8C3A;
+  --color-organic-soft: #E7EBD5;
+  --color-friendly: #C4732A;
+  --color-friendly-soft: #F5E2CD;
+  --color-both: #2D8B9E;
+  --color-both-soft: #DFEEF0;
+
+  --color-seal: #B8860B;
+  --color-seal-soft: #F2E6C4;
+
+  --color-rice: #D4A843;
+  --color-grain: #B8860B;
+  --color-veg: #7A8C3A;
+  --color-fruit: #C4732A;
+  --color-processed: #3FA0AF;
+  --color-other: #9C8B5E;
+
+  --font-serif: "Noto Serif TC", serif;
+  --font-sans: "Noto Sans TC", "Noto Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --radius-card: 14px;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+body {
+  margin: 0;
+  background: var(--color-paper-deep);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, .display {
+  font-family: var(--font-serif);
+}
+
+.seal-ring {
+  position: relative;
+}
+.seal-ring::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 9999px;
+  border: 1px dashed rgba(166, 64, 44, 0.4);
+}
+
+.game-card-shadow {
+  box-shadow: 8px 8px 0 rgba(51, 44, 28, 0.12);
+}
+
+.card-shadow {
+  box-shadow: 0 6px 18px rgba(51, 44, 28, 0.1);
+}

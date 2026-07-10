@@ -1,0 +1,8 @@
+node_modules
+npm-debug.log
+.geocode-cache.json
+.geocode-query-cache.json
+.git
+.gitignore
+Dockerfile
+.dockerignore
