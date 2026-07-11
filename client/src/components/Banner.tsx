@@ -4,6 +4,7 @@ import { useLang } from "../context/LangContext";
 import { STR } from "../data/content";
 import { listOperators } from "../api/organic";
 import type { Operator } from "../types";
+import Spinner from "./Spinner";
 
 export default function Banner() {
   const { lang, tv, toggleLang } = useLang();
@@ -87,9 +88,7 @@ export default function Banner() {
               <div className="absolute right-0 top-12 z-[70] w-[min(360px,88vw)] rounded-xl border border-line bg-surface p-2.5 card-shadow">
                 <div className="max-h-[300px] overflow-auto">
                   {!q.trim() && <div className="px-1.5 py-2 text-[13px] text-ink-soft">{tv(STR.searchPh)}</div>}
-                  {q.trim() && results === null && (
-                    <div className="px-1.5 py-2 text-[13px] text-ink-soft">…</div>
-                  )}
+                  {q.trim() && results === null && <Spinner variant="compact" />}
                   {q.trim() && results && results.length === 0 && (
                     <div className="px-1.5 py-2 text-[13px] text-ink-soft">{tv(STR.noResult)}</div>
                   )}

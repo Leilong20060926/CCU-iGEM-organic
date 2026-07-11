@@ -11,19 +11,20 @@ const CATEGORIES = [
     tokens: ["米"],
   },
   {
-    id: "grain",
-    zh: "雜糧及特用作物類",
-    en: "Grains & Special Crops",
+    id: "staple",
+    zh: "雜糧",
+    en: "Staple Grains",
     icon: "🌽",
-    subs: [
-      { id: "staple", zh: "雜糧", en: "Staple grains", tokens: ["雜糧", "種子(苗)"] },
-      {
-        id: "special",
-        zh: "特用作物",
-        en: "Special crops",
-        tokens: ["茶", "咖啡", "甘蔗", "堅果", "芻料作物", "非供食用之作物"],
-      },
-    ],
+    subs: null,
+    tokens: ["雜糧", "種子(苗)"],
+  },
+  {
+    id: "special",
+    zh: "特用作物",
+    en: "Special Crops",
+    icon: "🍵",
+    subs: null,
+    tokens: ["茶", "咖啡", "甘蔗", "堅果", "芻料作物", "非供食用之作物"],
   },
   {
     id: "veg",
@@ -122,6 +123,137 @@ function tokensForCategory(catId, subId) {
   return sub ? sub.tokens : [];
 }
 
+function matchesCategory(row, categoryId, subId) {
+  if (!categoryId) return true;
+  const tokens = tokensForCategory(categoryId, subId);
+  if (!tokens.length) return false;
+  const rowTokens = splitProducts(row.Products);
+  return tokens.some((t) => rowTokens.includes(t));
+}
+
+function splitCrops(containCropsField) {
+  return String(containCropsField || "")
+    .split("、")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+// Every leaf navigation unit: a category with no subs, or each of its subs.
+function leafUnits() {
+  const leaves = [];
+  for (const cat of CATEGORIES) {
+    if (cat.subs) {
+      for (const sub of cat.subs) leaves.push({ key: `${cat.id}:${sub.id}`, catId: cat.id, subId: sub.id });
+    } else {
+      leaves.push({ key: cat.id, catId: cat.id, subId: null });
+    }
+  }
+  return leaves;
+}
+
+const KNOWN_TOKENS = new Set(TOKEN_TO_CATEGORY.keys());
+const MIN_CROP_COUNT = 5;
+const MAX_CROPS_PER_LEAF = 40;
+
+// A handful of non-rice grain species are, in this dataset, grown almost
+// exclusively by operators who also grow rice (every "小麥" grower here also
+// lists 米) - so the majority-vote below is a genuine statistical tie with no
+// signal to break it, and defaults to whichever leaf happens to be listed
+// first. These are botanically unambiguous, so they're forced to "staple"
+// rather than left to the tie-break.
+const FORCED_STAPLE_MATCH = /小麥|蕎麥|薏苡|薏仁|大麥|燕麥|高粱|黃豆|大豆/;
+
+// Data-driven crop -> leaf-category attribution: since ContainCrops is each
+// operator's *entire* crop list (not scoped to one category) and a farm can
+// grow rice AND wheat AND vegetables, we can't just dump ContainCrops for
+// "rice" operators - that would wrongly include their wheat and vegetables
+// too. For every distinct crop name we tally which leaf categories its
+// growers belong to, across the WHOLE dataset, and assign the crop to
+// whichever leaf wins.
+//
+// A naive full-credit-per-leaf tally is skewed by diversified farms: if most
+// wheat growers happen to also grow rice, wheat gets fully credited to BOTH
+// "rice" and "staple" for every one of those farms, and can wrongly outrank
+// rice's genuine (but rarer) varieties. Each operator's vote is instead split
+// evenly across every leaf it matches, so a rice+wheat farm contributes only
+// half a vote to each - wheat still correctly loses to "staple" once actual
+// staple-only wheat growers are counted, since they aren't diluted.
+function buildCropIndex(rows) {
+  const leaves = leafUnits();
+  const scores = new Map(); // crop -> Map<leafKey, fractional score>
+  const totalMentions = new Map(); // crop -> raw operator count, for display/threshold
+
+  const rowLeavesCache = rows.map((row) => leaves.filter((l) => matchesCategory(row, l.catId, l.subId)).map((l) => l.key));
+
+  rows.forEach((row, i) => {
+    const rowLeaves = rowLeavesCache[i];
+    if (!rowLeaves.length) return;
+    const share = 1 / rowLeaves.length;
+
+    for (const crop of splitCrops(row.ContainCrops)) {
+      if (KNOWN_TOKENS.has(crop)) continue; // category label, not a specific crop
+      if (crop.length > 10 || crop.includes(",")) continue; // malformed/noisy entries
+      if (!scores.has(crop)) scores.set(crop, new Map());
+      const perLeaf = scores.get(crop);
+      for (const leafKey of rowLeaves) {
+        perLeaf.set(leafKey, (perLeaf.get(leafKey) || 0) + share);
+      }
+      totalMentions.set(crop, (totalMentions.get(crop) || 0) + 1);
+    }
+  });
+
+  // Determine each crop's winning leaf from the fractional scores.
+  const winningLeaf = new Map(); // crop -> leafKey
+  for (const [crop, perLeaf] of scores) {
+    if (FORCED_STAPLE_MATCH.test(crop) && perLeaf.has("staple")) {
+      winningLeaf.set(crop, "staple");
+      continue;
+    }
+    let bestLeaf = null;
+    let bestScore = 0;
+    for (const [leafKey, score] of perLeaf) {
+      if (score > bestScore) {
+        bestScore = score;
+        bestLeaf = leafKey;
+      }
+    }
+    if (bestLeaf) winningLeaf.set(crop, bestLeaf);
+  }
+
+  // Recount plainly: for each crop, how many operators that actually match its
+  // winning leaf also list it - a real, whole, interpretable number to display.
+  const realCounts = new Map(); // crop -> count
+  rows.forEach((row, i) => {
+    const rowLeaves = new Set(rowLeavesCache[i]);
+    for (const crop of splitCrops(row.ContainCrops)) {
+      const leafKey = winningLeaf.get(crop);
+      if (leafKey && rowLeaves.has(leafKey)) {
+        realCounts.set(crop, (realCounts.get(crop) || 0) + 1);
+      }
+    }
+  });
+
+  const byLeaf = new Map(leaves.map((l) => [l.key, []]));
+  for (const [crop, leafKey] of winningLeaf) {
+    const count = realCounts.get(crop) || 0;
+    if (totalMentions.get(crop) >= MIN_CROP_COUNT && count >= MIN_CROP_COUNT) {
+      byLeaf.get(leafKey).push({ name: crop, count });
+    }
+  }
+
+  for (const [leafKey, list] of byLeaf) {
+    list.sort((a, b) => b.count - a.count);
+    byLeaf.set(leafKey, list.slice(0, MAX_CROPS_PER_LEAF));
+  }
+
+  return byLeaf;
+}
+
+function cropsForCategory(cropIndex, catId, subId) {
+  const key = subId ? `${catId}:${subId}` : catId;
+  return cropIndex.get(key) || [];
+}
+
 const COUNTIES = [
   "臺北市", "新北市", "桃園市", "臺中市", "臺南市", "高雄市",
   "基隆市", "新竹市", "嘉義市",
@@ -140,8 +272,12 @@ module.exports = {
   TOKEN_LABELS_EN,
   COUNTIES,
   splitProducts,
+  splitCrops,
   categoryOf,
   tokensForCategory,
+  matchesCategory,
   countyOf,
   TOKEN_TO_CATEGORY,
+  buildCropIndex,
+  cropsForCategory,
 };

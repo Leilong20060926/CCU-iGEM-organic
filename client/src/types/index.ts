@@ -2,8 +2,11 @@ export type Lang = "zh" | "en";
 
 export type Status = "通過" | "結束" | "終止" | "暫終";
 
+export type CertType = "organic" | "friendly";
+
 export interface Operator {
   id: string;
+  certType: CertType;
   Name: string;
   Address: string;
   Tel: string;
@@ -57,6 +60,7 @@ export interface StatusCount {
 
 export interface MetaResponse {
   total: number;
+  certTypes: { value: CertType; count: number }[];
   categories: CategoryMeta[];
   counties: CountyCount[];
   statuses: StatusCount[];
@@ -86,4 +90,11 @@ export interface ListParams {
   sub?: string;
   county?: string;
   status?: string;
+  crop?: string;
+  certType?: CertType;
+}
+
+export interface CropCount {
+  name: string;
+  count: number;
 }

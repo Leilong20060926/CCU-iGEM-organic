@@ -5,6 +5,7 @@ import { STR } from "../data/content";
 import { useMeta } from "../hooks/useMeta";
 import BackLink from "../components/BackLink";
 import CountyLeafletMap from "../components/CountyLeafletMap";
+import Spinner from "../components/Spinner";
 import { COUNTY_POINTS } from "../data/countyMap";
 
 export default function MapPage() {
@@ -22,7 +23,7 @@ export default function MapPage() {
       <h2 className="mb-1 mt-0.5 text-[26px] font-bold">{tv(STR.mapTitle)}</h2>
       <p className="mb-4 text-[13px] text-ink-soft">{tv(STR.mapSub)}</p>
 
-      {loading && <div className="text-sm text-ink-soft">…</div>}
+      {loading && <Spinner />}
 
       <div className="flex flex-wrap items-start gap-6.5">
         <div className="flex-none overflow-hidden rounded-[14px] border border-line bg-surface p-3.5">

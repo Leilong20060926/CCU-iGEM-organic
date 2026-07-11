@@ -4,11 +4,12 @@ import { useLang } from "../context/LangContext";
 import { STR, STATUS_LABELS } from "../data/content";
 import { useMeta } from "../hooks/useMeta";
 import { listOperators } from "../api/organic";
-import type { Operator, SortField } from "../types";
+import type { CertType, Operator, SortField } from "../types";
 import BackLink from "../components/BackLink";
 import OperatorCard from "../components/OperatorCard";
 import FilterChips from "../components/FilterChips";
 import Pagination from "../components/Pagination";
+import Spinner from "../components/Spinner";
 
 const SORT_OPTIONS: { value: SortField; zh: string; en: string }[] = [
   { value: "Name", zh: "名稱", en: "Name" },
@@ -18,7 +19,7 @@ const SORT_OPTIONS: { value: SortField; zh: string; en: string }[] = [
 ];
 
 export default function OperatorListPage() {
-  const { catId, sub } = useParams();
+  const { catId, sub, crop } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { lang, tv } = useLang();
   const { meta } = useMeta();
@@ -29,13 +30,14 @@ export default function OperatorListPage() {
   const sortBy = (searchParams.get("sortBy") as SortField) || "Name";
   const order = (searchParams.get("order") as "asc" | "desc") || "asc";
   const status = searchParams.get("status") ?? "all";
+  const certType = searchParams.get("certType") ?? "all";
 
   const [result, setResult] = useState<{ data: Operator[]; total: number; totalPages: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const activeSub = sub && sub !== "list" ? sub : undefined;
+  const activeCrop = crop && crop !== "_all" ? crop : undefined;
   const cat = catId ? meta?.categories.find((c) => c.id === catId) : undefined;
-  const subMeta = cat?.subs?.find((s) => s.id === activeSub);
+  const subMeta = cat?.subs?.find((s) => s.id === sub);
 
   useEffect(() => {
     setLoading(true);
@@ -46,13 +48,15 @@ export default function OperatorListPage() {
       order,
       search: q || undefined,
       category: catId,
-      sub: activeSub,
+      sub,
+      crop: activeCrop,
       county: county || undefined,
       status: status !== "all" ? status : undefined,
+      certType: certType !== "all" ? (certType as CertType) : undefined,
     })
       .then(setResult)
       .finally(() => setLoading(false));
-  }, [catId, activeSub, county, page, sortBy, order, status, q]);
+  }, [catId, sub, activeCrop, county, page, sortBy, order, status, certType, q]);
 
   function update(patch: Record<string, string>) {
     const next = new URLSearchParams(searchParams);
@@ -64,15 +68,19 @@ export default function OperatorListPage() {
     setSearchParams(next);
   }
 
-  const backTo = catId ? (cat?.subs ? `/category/${catId}` : "/") : "/";
-  const title = catId
-    ? cat
-      ? lang === "zh"
-        ? subMeta?.zh ?? cat.zh
-        : subMeta?.en ?? cat.en
-      : "…"
-    : q || county || tv(STR.searchResultsFor);
-  const subtitle = catId && cat && subMeta ? (lang === "zh" ? cat.zh : cat.en) : null;
+  const backTo = catId ? (sub ? `/category/${catId}/${sub}` : cat?.subs ? `/category/${catId}` : `/category/${catId}/crops`) : "/";
+  const categoryLabel = cat ? (lang === "zh" ? subMeta?.zh ?? cat.zh : subMeta?.en ?? cat.en) : null;
+
+  let title: string;
+  let subtitle: string | null = null;
+  if (activeCrop) {
+    title = activeCrop;
+    subtitle = categoryLabel;
+  } else if (catId) {
+    title = categoryLabel ?? "…";
+  } else {
+    title = q || county || tv(STR.searchResultsFor);
+  }
 
   return (
     <div>
@@ -83,6 +91,16 @@ export default function OperatorListPage() {
       <p className="mb-4 text-[13px] text-ink-soft">
         {result ? result.total.toLocaleString() : "…"} {tv(STR.operatorsCount)}
       </p>
+
+      <FilterChips
+        options={[
+          { value: "all", label: tv(STR.all) },
+          { value: "organic", label: `🌱 ${tv(STR.organicTag)}` },
+          { value: "friendly", label: `🤝 ${tv(STR.friendlyTag)}` },
+        ]}
+        value={certType}
+        onChange={(v) => update({ certType: v === "all" ? "" : v })}
+      />
 
       <FilterChips
         options={[
@@ -122,7 +140,7 @@ export default function OperatorListPage() {
         )}
       </div>
 
-      {loading && <div className="text-sm text-ink-soft">…</div>}
+      {loading && <Spinner />}
 
       {!loading && (!result || result.data.length === 0) && (
         <div className="px-1.5 py-2 text-[13px] text-ink-soft">{tv(STR.noResult)}</div>

@@ -1,6 +1,7 @@
 export const CATEGORY_COLOR_CLASS: Record<string, string> = {
   rice: "bg-rice",
-  grain: "bg-grain",
+  staple: "bg-grain",
+  special: "bg-grain",
   veg: "bg-veg",
   fruit: "bg-fruit",
   processed: "bg-processed",

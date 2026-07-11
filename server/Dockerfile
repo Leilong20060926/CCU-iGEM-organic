@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-COPY index.js taxonomy.js geocode.js ./
+COPY index.js taxonomy.js geocode.js friendly.js ./
 
 RUN addgroup -S app && adduser -S app -G app \
     && mkdir -p /app/cache \

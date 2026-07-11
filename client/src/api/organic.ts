@@ -1,4 +1,4 @@
-import type { GeocodeResult, ListParams, MetaResponse, Operator, OperatorListResponse } from "../types";
+import type { CropCount, GeocodeResult, ListParams, MetaResponse, Operator, OperatorListResponse } from "../types";
 
 async function apiFetch<T>(path: string): Promise<T> {
   const res = await fetch(path);
@@ -27,4 +27,10 @@ export function getOperator(id: string): Promise<Operator> {
 
 export function geocodeOperator(id: string): Promise<GeocodeResult> {
   return apiFetch(`/api/organic/${encodeURIComponent(id)}/geocode`);
+}
+
+export async function getCrops(category: string, sub?: string): Promise<CropCount[]> {
+  const qs = new URLSearchParams({ category, ...(sub ? { sub } : {}) });
+  const res = await apiFetch<{ crops: CropCount[] }>(`/api/organic/crops?${qs.toString()}`);
+  return res.crops;
 }

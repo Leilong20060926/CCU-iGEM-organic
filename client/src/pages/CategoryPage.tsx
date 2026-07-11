@@ -4,6 +4,7 @@ import { STR } from "../data/content";
 import { useMeta } from "../hooks/useMeta";
 import BackLink from "../components/BackLink";
 import Tile from "../components/Tile";
+import Spinner from "../components/Spinner";
 import { CATEGORY_COLOR_CLASS } from "../data/categoryColors";
 
 export default function CategoryPage() {
@@ -11,11 +12,11 @@ export default function CategoryPage() {
   const { tv } = useLang();
   const { meta, loading } = useMeta();
 
-  if (loading) return <div className="text-sm text-ink-soft">…</div>;
+  if (loading) return <Spinner />;
 
   const cat = meta?.categories.find((c) => c.id === catId);
   if (!cat) return <Navigate to="/" replace />;
-  if (!cat.subs) return <Navigate to={`/category/${cat.id}/list`} replace />;
+  if (!cat.subs) return <Navigate to={`/category/${cat.id}/crops`} replace />;
 
   return (
     <div>

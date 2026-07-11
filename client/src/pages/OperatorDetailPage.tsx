@@ -6,6 +6,8 @@ import { geocodeOperator, getOperator } from "../api/organic";
 import type { GeocodeResult, Operator } from "../types";
 import BackLink from "../components/BackLink";
 import StatusBadge from "../components/StatusBadge";
+import CertTypeBadge from "../components/CertTypeBadge";
+import Spinner from "../components/Spinner";
 import CountyLeafletMap from "../components/CountyLeafletMap";
 import AddressPinMap from "../components/AddressPinMap";
 import { countyPoint } from "../data/countyMap";
@@ -43,8 +45,9 @@ export default function OperatorDetailPage() {
   }, [id]);
 
   if (error) return <div className="text-sm text-ink-soft">{tv(STR.noResult)}</div>;
-  if (!op) return <div className="text-sm text-ink-soft">…</div>;
+  if (!op) return <Spinner />;
 
+  const isFriendly = op.certType === "friendly";
   const crops = splitList(op.ContainCrops);
   const categories = splitList(op.Products);
 
@@ -65,8 +68,9 @@ export default function OperatorDetailPage() {
                 "repeating-linear-gradient(135deg, var(--color-paper-deep), var(--color-paper-deep) 10px, var(--color-paper) 10px, var(--color-paper) 20px)",
             }}
           >
-            <div className="absolute left-2.5 top-2.5">
+            <div className="absolute left-2.5 top-2.5 flex flex-col items-start gap-1">
               <StatusBadge status={op.Status} />
+              <CertTypeBadge certType={op.certType} />
             </div>
             🌾
           </div>
@@ -95,7 +99,7 @@ export default function OperatorDetailPage() {
               {tv(STR.certBlock)}
             </h3>
             <div className="grid grid-cols-[110px_1fr] gap-x-2.5 gap-y-2 text-[13px]">
-              <div className="text-ink-soft">{tv(STR.certNo)}</div>
+              <div className="text-ink-soft">{tv(isFriendly ? STR.friendlyCertNo : STR.certNo)}</div>
               <div className="font-mono font-semibold">{op.CertOrganicSn}</div>
               {op.OldCertOrganicSN && (
                 <>
@@ -103,7 +107,7 @@ export default function OperatorDetailPage() {
                   <div className="font-mono font-semibold">{op.OldCertOrganicSN}</div>
                 </>
               )}
-              <div className="text-ink-soft">{tv(STR.certAgency)}</div>
+              <div className="text-ink-soft">{tv(isFriendly ? STR.friendlyGroup : STR.certAgency)}</div>
               <div className="font-semibold">{op.CompanyName}</div>
               <div className="text-ink-soft">{tv(STR.certExpiry)}</div>
               <div className="font-mono font-semibold">{op.EffectiveDate}</div>

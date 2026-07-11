@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Operator } from "../types";
 import StatusBadge from "./StatusBadge";
+import CertTypeBadge from "./CertTypeBadge";
 
 export default function OperatorCard({ op }: { op: Operator }) {
   return (
@@ -14,6 +15,9 @@ export default function OperatorCard({ op }: { op: Operator }) {
       </div>
       <div className="text-[14.5px] font-bold">{op.Name}</div>
       <div className="mt-1 text-[11.5px] text-ink-soft">{op.CompanyName}</div>
+      <div className="mt-1.5">
+        <CertTypeBadge certType={op.certType} />
+      </div>
       <div className="mt-2 line-clamp-2 text-[12px] text-ink-soft">{op.Products}</div>
     </Link>
   );

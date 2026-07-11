@@ -4,6 +4,7 @@ import { STR } from "../data/content";
 import { CATEGORY_COLOR_CLASS } from "../data/categoryColors";
 import { useMeta } from "../hooks/useMeta";
 import Tile from "../components/Tile";
+import Spinner from "../components/Spinner";
 
 export default function Home() {
   const { lang, tv } = useLang();
@@ -52,7 +53,11 @@ export default function Home() {
         {tv(STR.categories)}
       </div>
       <div className="grid grid-cols-3 gap-4 max-[860px]:grid-cols-2">
-        {loading && <div className="col-span-full text-sm text-ink-soft">…</div>}
+        {loading && (
+          <div className="col-span-full">
+            <Spinner />
+          </div>
+        )}
         {meta?.categories.map((c) => (
           <Tile
             key={c.id}
