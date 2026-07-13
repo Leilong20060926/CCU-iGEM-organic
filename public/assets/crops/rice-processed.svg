@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" rx="48" fill="#F8F2E4"/>
+  <rect x="120" y="150" width="360" height="260" rx="34" fill="#FFF9EB" stroke="#C9B58B" stroke-width="10"/>
+  <path d="M180 400c58-76 116-114 220-120" stroke="#7A9440" stroke-width="20" fill="none" stroke-linecap="round"/>
+  <circle cx="240" cy="280" r="42" fill="#C69A41"/>
+  <circle cx="320" cy="260" r="38" fill="#D9B463"/>
+  <circle cx="380" cy="290" r="36" fill="#B47B2D"/>
+  <text x="300" y="520" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="40" fill="#5A5348">碾製品</text>
+</svg>

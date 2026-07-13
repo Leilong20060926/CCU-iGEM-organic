@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" rx="48" fill="#F8F2E4"/>
+  <circle cx="300" cy="300" r="200" fill="#E1C06A"/>
+  <circle cx="240" cy="250" r="46" fill="#A56A2B"/>
+  <circle cx="340" cy="240" r="42" fill="#C4802F"/>
+  <circle cx="285" cy="350" r="46" fill="#9A5320"/>
+  <circle cx="385" cy="330" r="38" fill="#A56A2B"/>
+  <path d="M180 430c52-82 116-124 220-128" stroke="#5F7A2D" stroke-width="20" fill="none" stroke-linecap="round"/>
+  <text x="300" y="520" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="42" fill="#5A5348">稻穀</text>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" rx="48" fill="#F4F0E6"/>
+  <rect x="70" y="70" width="460" height="460" rx="36" fill="#F9F6EE" stroke="#C9C1A8" stroke-width="8"/>
+  <path d="M182 430c40-90 112-152 216-178" stroke="#4C7C3A" stroke-width="24" fill="none" stroke-linecap="round"/>
+  <path d="M195 410c46-56 92-91 160-110" stroke="#6DAE4A" stroke-width="18" fill="none" stroke-linecap="round"/>
+  <circle cx="220" cy="215" r="48" fill="#F0C56D"/>
+  <circle cx="388" cy="220" r="40" fill="#E0A24D"/>
+  <text x="300" y="520" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="42" fill="#5A5348">農產品</text>
+</svg>
