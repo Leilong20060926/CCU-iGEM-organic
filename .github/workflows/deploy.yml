@@ -1,0 +1,45 @@
+name: Deploy to server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
+
+            if [ -z "$DEPLOY_PATH" ]; then
+              echo "DEPLOY_PATH is not set"
+              exit 1
+            fi
+
+            if [ ! -d "$DEPLOY_PATH/.git" ]; then
+              echo "Repository not found at $DEPLOY_PATH"
+              exit 1
+            fi
+
+            cd "$DEPLOY_PATH"
+            git fetch origin
+            git checkout main
+            git reset --hard origin/main
+            docker compose up -d --build --force-recreate
+            docker compose ps
