@@ -1,7 +1,6 @@
 export const CROP_IMAGES: Record<string, string> = {
   default: "/assets/crops/default-crop.svg",
   "稻穀": "/assets/1-1.jpg",
-  "稻米": "/assets/1-1.jpg",
   "稻穀之碾製品": "/assets/1-2.webp",
   "水稻及其碾製品": "/assets/1-3.jpg",
   "乾穀": "/assets/1-4.jpg",
@@ -19,8 +18,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "小米": "/assets/2-10.jpg",
   "芝麻": "/assets/2-11.png",
   "硬質玉米": "/assets/2-12.jpg",
-  "玉米": "/assets/2-12.jpg",
-  "玉米粒": "/assets/2-12.jpg",
   "蕎麥": "/assets/2-13.avif",
   "高粱": "/assets/2-14.jpg",
   "薏苡": "/assets/2-15.png",
@@ -65,7 +62,3 @@ export const CROP_IMAGES: Record<string, string> = {
   "乾洛神葵": "/assets/5-1-28.webp",
 };
 
-export function getCropImageSrc(name?: string) {
-  const normalized = (name ?? "").trim();
-  return CROP_IMAGES[normalized] ?? CROP_IMAGES.default;
-}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useLang } from "../context/LangContext";
 import { STR } from "../data/content";
-import { getCropImageSrc } from "../data/cropImages.ts";
+import { CROP_IMAGES } from "../data/cropImages.ts";
 import { useMeta } from "../hooks/useMeta";
 import { getCrops } from "../api/organic";
 import type { CropCount } from "../types";
@@ -48,7 +48,7 @@ export default function CropListPage() {
             to={`${basePath}/crop/${encodeURIComponent(crop.name)}`}
             className="rounded-[14px] border border-line bg-surface p-3 text-center transition-transform hover:-translate-y-0.5 hover:card-shadow"
           >
-            <ImagePlaceholder className="mb-2.5" src={getCropImageSrc(crop.name)} alt={crop.name} />
+            <ImagePlaceholder className="mb-2.5" src={CROP_IMAGES[crop.name] ?? CROP_IMAGES.default} alt={crop.name} />
             <div className="text-[13.5px] font-bold">{crop.name}</div>
             <div className="mt-0.5 text-[11px] text-ink-soft">{crop.count.toLocaleString()}</div>
           </Link>
