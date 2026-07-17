@@ -54,7 +54,10 @@ export default function OperatorListPage() {
       status: status !== "all" ? status : undefined,
       certType: certType !== "all" ? (certType as CertType) : undefined,
     })
-      .then(setResult)
+      .then((res) => {
+        const sorted = [...res.data].sort((a, b) => (a.Status === "通過" && b.Status !== "通過" ? -1 : b.Status === "通過" && a.Status !== "通過" ? 1 : 0));
+        setResult({ ...res, data: sorted });
+      })
       .finally(() => setLoading(false));
   }, [catId, sub, activeCrop, county, page, sortBy, order, status, certType, q]);
 

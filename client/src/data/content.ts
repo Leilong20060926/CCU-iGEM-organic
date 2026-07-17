@@ -119,10 +119,20 @@ export const INFO_SECTIONS: { zh: string; en: string; points: Bi[] }[] = [
       { zh: "支持環保標章，購買選用環保包裝的產品。", en: "Support eco-labels and choose products with environmentally friendly packaging." },
     ],
   },
+    {
+    zh: "驗證狀態說明", en: "Certification Status Definitions",
+    points: [
+      { zh: "通過：證書有效，該業者的驗證已通過且目前有效。", en: "Active: the certification is approved and currently valid." },
+      { zh: "結束：驗證已到期或正常結束，不再具有有效資格。", en: "Ended: the certification has expired or ended normally and is no longer active." },
+      { zh: "終止：驗證被提前取消或撤銷，代表中止授權。", en: "Terminated: the certification was canceled early or revoked, indicating the authorization has been stopped." },
+      { zh: "暫終：驗證暫時中止，尚未完全結束，可能待復查或補件。", en: "Suspended: the certification is temporarily paused and not fully ended, possibly pending review or follow-up." },
+    ],
+  },
 ];
 
 export const ABOUT_LINKS = [
   { icon: "📷", zh: "Instagram", en: "Instagram", url: "https://www.instagram.com/ccuigem/" },
   { icon: "🌐", zh: "學校官網", en: "Team website", url: "https://igem.ccu.edu.tw" },
   { icon: "▶️", zh: "YouTube", en: "YouTube", url: "https://www.youtube.com/@ccutaiwanigemteam133/featured" },
+  { icon: "🎮", zh: "NoFold 小遊戲", en: "NoFold Game", url: "https://leilong20060926.github.io/CCU-iGEM-game/" },
 ];

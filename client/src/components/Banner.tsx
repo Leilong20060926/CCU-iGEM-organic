@@ -5,6 +5,7 @@ import { STR } from "../data/content";
 import { listOperators } from "../api/organic";
 import type { Operator } from "../types";
 import Spinner from "./Spinner";
+import StatusBadge from "./StatusBadge";
 
 export default function Banner() {
   const { lang, tv, toggleLang } = useLang();
@@ -29,8 +30,11 @@ export default function Banner() {
       return;
     }
     const handle = setTimeout(() => {
-      listOperators({ search: query, pageSize: 8 })
-        .then((res) => setResults(res.data))
+      listOperators({ search: query, pageSize: 8, status: "通過" })
+        .then((res) => {
+          const sorted = [...res.data].sort((a, b) => (a.Status === "通過" && b.Status !== "通過" ? -1 : b.Status === "通過" && a.Status !== "通過" ? 1 : 0));
+          setResults(sorted);
+        })
         .catch(() => setResults([]));
     }, 300);
     return () => clearTimeout(handle);
@@ -100,9 +104,14 @@ export default function Banner() {
                       className="flex items-center gap-2.5 rounded-lg px-1.5 py-2 hover:bg-paper-deep"
                     >
                       <div>
-                        <div className="text-[13.5px] font-bold">
-                          {op.Name}{" "}
-                          <span className="font-normal text-[11px] text-ink-soft">{op.county}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="text-[13.5px] font-bold">
+                            {op.Name} {" "}
+                            <span className="font-normal text-[11px] text-ink-soft">{op.county}</span>
+                          </div>
+                          <div>
+                            <StatusBadge status={op.Status} />
+                          </div>
                         </div>
                         <div className="text-[11px] text-ink-soft">{op.Products}</div>
                       </div>
