@@ -110,6 +110,15 @@ export const CROP_IMAGES: Record<string, string> = {
   "椪柑": "/assets/5-2-14.png",
   "珍珠柑": "/assets/5-2-15.jpg",
   "美人柑": "/assets/5-2-16.jpg",
+  "香丁": "/assets/5-2-17.png",
+  "蜜柑": "/assets/5-2-18.png",
+  "文旦": "/assets/5-2-19.jpg",
+  "西施柚": "/assets/5-2-20.jpg",
+  "白柚": "/assets/5-2-21.jpg",
+  "蜜柚": "/assets/5-2-22.jpg",
+  "香檬": "/assets/5-2-23.jpeg",
+  "檸檬乾": "/assets/5-2-24.jpg",
+  "香水檸檬": "/assets/5-2-25.jpg",
   
   "梅": "/assets/5-3-1.jpg",
   "芒果": "/assets/5-3-2.jpg",
@@ -341,6 +350,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "玫瑰": "/assets/7-24.png",
   "香蜂草": "/assets/7-25.jpg",
   "油甘": "/assets/7-26.jpg",
-  "羊奶頭": "/assets/7-27.webp",
+  "羊奶頭": "/assets/7-27.jpg",
 };
 
