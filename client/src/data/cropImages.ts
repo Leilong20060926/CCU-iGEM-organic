@@ -1,7 +1,6 @@
 export const CROP_IMAGES: Record<string, string> = {
   default: "/assets/crops/default-crop.svg",
   
-  //米類
   "稻穀": "/assets/1-1.jpg",
   "稻穀之碾製品": "/assets/1-2.webp",
   "水稻": "/assets/1-3.jpg",
@@ -11,7 +10,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "碾製米": "/assets/1-7.jpg",
   "水稻及其碾製品": "/assets/1-8.webp",
 
-  //雜糧
   "甘藷": "/assets/2-1.jpg",
   "黑豆": "/assets/2-2.jpg",
   "黃豆": "/assets/2-3.webp",
@@ -41,7 +39,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "黑豆(乾燥脫粒)": "/assets/2-27.jpg",
   "黃豆(乾燥脫粒)": "/assets/2-28.jpg",
   
-  //特用作物
   "咖啡鮮果": "/assets/3-1.jpg",
   "茶菁": "/assets/3-2.jpg",
   "茶葉": "/assets/3-3.jpg",
@@ -68,7 +65,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "咖啡葉": "/assets/3-24.jpg",
   "胡椒": "/assets/3-25.jpg",
   
-  //大／小漿果
   "香蕉": "/assets/5-1-1.jpg",
   "木瓜": "/assets/5-1-2.jpg",
   "百香果": "/assets/5-1-3.jpg",
@@ -98,7 +94,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "山竹": "/assets/5-1-27.webp",
   "乾洛神葵": "/assets/5-1-28.webp",
 
-  //柑桔類
   "檸檬": "/assets/5-2-1.jpg",
   "柚子": "/assets/5-2-2.jpg",
   "柳橙": "/assets/5-2-3.jpg",
@@ -106,8 +101,16 @@ export const CROP_IMAGES: Record<string, string> = {
   "葡萄柚": "/assets/5-2-5.webp",
   "柑橘": "/assets/5-2-6.jpg",
   "萊姆": "/assets/5-2-7.jpg",
+  "金棗": "/assets/5-2-8.jpg",
+  "臍橙": "/assets/5-2-9.jpg",
+  "砂糖橘": "/assets/5-2-10.png",
+  "桶柑": "/assets/5-2-11.jpg",
+  "帝王柑": "/assets/5-2-12.jpg",
+  "茂谷柑": "/assets/5-2-13.jpg",
+  "椪柑": "/assets/5-2-14.png",
+  "珍珠柑": "/assets/5-2-15.jpg",
+  "美人柑": "/assets/5-2-16.jpg",
   
-  //核果與梨果類
   "梅": "/assets/5-3-1.jpg",
   "芒果": "/assets/5-3-2.jpg",
   "龍眼": "/assets/5-3-3.jpg",
@@ -125,7 +128,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "櫻桃": "/assets/5-3-15.jpg",
   "椰棗": "/assets/5-3-16.png",
 
-  //包葉菜
   "甘藍": "/assets/4-1-1.jpg",
   "包心白菜": "/assets/4-1-2.jpg",
   "結球萵苣": "/assets/4-1-3.jpg",
@@ -159,7 +161,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "紅辣椒": "/assets/4-1-31.jpg",
   "白花椰菜": "/assets/4-1-32.jpg",
   
-  //短期葉菜
   "菠菜": "/assets/4-2-1.jpg",
   "蔥": "/assets/4-2-2.avif",
   "葉菜甘藷": "/assets/4-2-3.jpg",
@@ -199,7 +200,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "青油菜": "/assets/4-2-37.jpg",
   "萵苣": "/assets/4-2-38.jpg",
   
-  //根莖菜
   "蘿蔔": "/assets/4-3-1.png",
   "竹筍": "/assets/4-3-2.jpg",
   "胡蘿蔔": "/assets/4-3-3.jpg",
@@ -231,7 +231,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "石篙筍": "/assets/4-3-29.jpg",
   "甜龍筍": "/assets/4-3-30.jpg",
 
-  //花菜／果菜／豆菜／瓜菜
   "南瓜": "/assets/4-4-1.png",
   "絲瓜": "/assets/4-4-2.jpg",
   "茄子": "/assets/4-4-3.webp",
@@ -262,7 +261,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "翼豆": "/assets/4-4-28.jpg",
   "菰瓜": "/assets/4-4-29.jpg",
 
-  //蕈菜／芽菜
   "香菇": "/assets/4-5-1.jpg",
   "木耳": "/assets/4-5-2.png",
   "杏鮑菇": "/assets/4-5-3.jpg",
@@ -300,7 +298,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "白雪菇": "/assets/4-5-35.jpg",
   "酒杯菇": "/assets/4-5-36.jpg",
 
-  //農糧加工品類
   "白米": "/assets/6-1.jpg",
   "糙米": "/assets/6-2.jpg",
   "乾香菇": "/assets/6-3.png",
@@ -318,7 +315,6 @@ export const CROP_IMAGES: Record<string, string> = {
   "有機黑芝麻粉": "/assets/6-15.jpg",
   "黑糙米": "/assets/6-16.avif",
 
-  //其他
   "薄荷": "/assets/7-1.jpg",
   "魚腥草": "/assets/7-2.jpg",
   "香茅": "/assets/7-3.jpg",

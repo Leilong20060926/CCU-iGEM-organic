@@ -10,6 +10,7 @@ const {
   splitCrops,
   buildCropIndex,
   cropsForCategory,
+  normalizeCrop,
 } = require("./taxonomy");
 const { geocodeAddress } = require("./geocode");
 const { getFriendlyCache, friendlyIdsForCrop, getFriendlyDetail } = require("./friendly");
@@ -241,7 +242,7 @@ app.get("/api/organic", async (req, res) => {
     if (category) filtered = filtered.filter((r) => matchesCategory(r, category, sub));
     if (county) filtered = filtered.filter((r) => r.county === county);
     if (status) filtered = filtered.filter((r) => r.Status === status);
-    if (crop) filtered = filtered.filter((r) => splitCrops(r.ContainCrops).includes(crop));
+    if (crop) filtered = filtered.filter((r) => splitCrops(r.ContainCrops).map(normalizeCrop).includes(crop));
     if (search) {
       const needle = String(search).toLowerCase();
       filtered = filtered.filter((row) =>
