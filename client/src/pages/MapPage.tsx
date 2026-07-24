@@ -5,6 +5,7 @@ import { STR } from "../data/content";
 import { useMeta } from "../hooks/useMeta";
 import BackLink from "../components/BackLink";
 import CountyLeafletMap from "../components/CountyLeafletMap";
+import NearestVendorFinder from "../components/NearestVendorFinder";
 import Spinner from "../components/Spinner";
 import { COUNTY_POINTS } from "../data/countyMap";
 
@@ -22,6 +23,8 @@ export default function MapPage() {
       <BackLink to="/">{tv(STR.backHome)}</BackLink>
       <h2 className="mb-1 mt-0.5 text-[26px] font-bold">{tv(STR.mapTitle)}</h2>
       <p className="mb-4 text-[13px] text-ink-soft">{tv(STR.mapSub)}</p>
+
+      <NearestVendorFinder />
 
       {loading && <Spinner />}
 

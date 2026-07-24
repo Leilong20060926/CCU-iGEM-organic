@@ -3,8 +3,8 @@ import type { Lang } from "../types";
 type Bi = Record<Lang, string>;
 
 export const STR = {
-  appNameZh: "有心良食",
-  appNameEn: "TrueHarvest",
+  appNameZh: "綠農地圖",
+  appNameEn: "Taiwan Organic Agriculture Map",
   heroP: {
     zh: "查詢全台有機農產品的驗證資訊與經營者，讓每一次採買都吃得安心、買得明白。",
     en: "Look up certification and operator info for organic farm products across Taiwan.",
@@ -51,6 +51,16 @@ export const STR = {
   mapSub: { zh: "圓點標示各縣市中心位置，大小代表驗證業者數量（非個別業者實際地址）", en: "Dots mark each county's center; size reflects operator count (not individual operator addresses)." } as Bi,
   countyListTitle: { zh: "縣市清單", en: "Counties" } as Bi,
   viewOperators: { zh: "查看業者 →", en: "View operators →" } as Bi,
+  nearestFinderTitle: { zh: "找離我最近的業者", en: "Find the nearest vendor" } as Bi,
+  nearestFinderSub: { zh: "輸入想找的農產品，並使用您的位置，依距離排序最近的縣市", en: "Enter a produce name and use your location to rank counties by distance." } as Bi,
+  cropInputPh: { zh: "例如：黑米、芒果、香菇…", en: "e.g. black rice, mango, shiitake…" } as Bi,
+  useMyLocation: { zh: "📍 使用我的位置", en: "📍 Use my location" } as Bi,
+  locating: { zh: "定位中…", en: "Locating…" } as Bi,
+  locationDenied: { zh: "無法取得您的位置，請確認已允許瀏覽器定位權限", en: "Couldn't get your location — please allow location access in your browser." } as Bi,
+  locationUnsupported: { zh: "您的瀏覽器不支援定位功能", en: "Your browser doesn't support geolocation." } as Bi,
+  noCropMatch: { zh: "找不到符合的農產品，請確認名稱是否正確", en: "No matching produce found — check the spelling." } as Bi,
+  noVendorForCrop: { zh: "目前查無販售此農產品的驗證業者", en: "No certified vendors currently carry this produce." } as Bi,
+  awayFromYou: { zh: "公里", en: "km away" } as Bi,
   openGmap: { zh: "開啟 Google 地圖 →", en: "Open in Google Maps →" } as Bi,
   aboutTitle: { zh: "關於我們", en: "About us" } as Bi,
   aboutIntro: { zh: "簡介", en: "About" } as Bi,
@@ -64,7 +74,7 @@ export const STR = {
   dbName: { zh: "有機農產品全國資訊網（農糧署）", en: "National Organic Product Information Network" } as Bi,
   miniMapTitle: { zh: "全台驗證業者分布", en: "Nationwide operator distribution" } as Bi,
   miniMapCta: { zh: "查看完整地圖 →", en: "View full map →" } as Bi,
-  footer: { zh: "© 有心良食 TrueHarvest － 資料來源：農業部有機農產品追溯資訊", en: "© TrueHarvest — data source: MOA organic traceability open data" } as Bi,
+  footer: { zh: "© 綠農地圖 Taiwan Organic Agriculture Map － 資料來源：農業部有機農產品追溯資訊", en: "© Taiwan Organic Agriculture Map — data source: MOA organic traceability open data" } as Bi,
 };
 
 export const STATUS_LABELS: Record<string, Bi> = {

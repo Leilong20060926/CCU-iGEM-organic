@@ -34,3 +34,14 @@ export async function getCrops(category: string, sub?: string): Promise<CropCoun
   const res = await apiFetch<{ crops: CropCount[] }>(`/api/organic/crops?${qs.toString()}`);
   return res.crops;
 }
+
+export async function getAllCrops(): Promise<CropCount[]> {
+  const res = await apiFetch<{ crops: CropCount[] }>("/api/organic/all-crops");
+  return res.crops;
+}
+
+export async function getCropCounties(crop: string): Promise<CropCount[]> {
+  const qs = new URLSearchParams({ crop });
+  const res = await apiFetch<{ counties: CropCount[] }>(`/api/organic/crop-counties?${qs.toString()}`);
+  return res.counties;
+}

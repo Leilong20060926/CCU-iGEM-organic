@@ -53,12 +53,26 @@ async function postQuery(params, retried = false) {
     body,
   });
 
-  if (!res.ok) {
+  // A stale/expired session doesn't produce an HTTP error here - the site
+  // answers 200 with a "系統發生錯誤！" error page instead of JSON. Treat any
+  // unparseable body the same as an HTTP failure: drop the session and retry
+  // once with a fresh handshake.
+  let data = null;
+  const text = await res.text();
+  if (res.ok) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
+  }
+
+  if (!data) {
     session = null;
     if (!retried) return postQuery(params, true);
-    throw new Error(`Friendly query failed with status ${res.status}`);
+    throw new Error(`Friendly query failed (${res.status}): ${text.slice(0, 40)}`);
   }
-  return res.json();
+  return data;
 }
 
 // --- full operator list ---

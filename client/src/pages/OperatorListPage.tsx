@@ -35,7 +35,8 @@ export default function OperatorListPage() {
   const [result, setResult] = useState<{ data: Operator[]; total: number; totalPages: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const activeCrop = crop && crop !== "_all" ? crop : undefined;
+  const cropFromQuery = searchParams.get("crop") ?? undefined;
+  const activeCrop = (crop && crop !== "_all" ? crop : undefined) ?? cropFromQuery;
   const cat = catId ? meta?.categories.find((c) => c.id === catId) : undefined;
   const subMeta = cat?.subs?.find((s) => s.id === sub);
 

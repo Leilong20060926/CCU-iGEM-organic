@@ -11,13 +11,16 @@ export default function Banner() {
   const { lang, tv, toggleLang } = useLang();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Operator[] | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     };
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
@@ -56,9 +59,9 @@ export default function Banner() {
             alt="NoFold"
             className="block h-[42px] w-[42px] flex-none -rotate-6 rounded-full border-[2.5px] border-seal object-cover"
           />
-          <div className="leading-[1.05]">
+          <div className="max-w-[140px] leading-[1.05] min-[521px]:max-w-none">
             <span className="block text-[19px] font-bold">{STR.appNameZh}</span>
-            <span className="block text-[10.5px] uppercase tracking-[0.14em] text-ink-soft">
+            <span className="block break-words text-[9.5px] uppercase leading-tight tracking-normal text-ink-soft min-[521px]:text-[10.5px] min-[521px]:tracking-[0.1em]">
               {STR.appNameEn}
             </span>
           </div>
@@ -74,6 +77,34 @@ export default function Banner() {
           <Link to="/map" className="rounded-full px-3 py-2 text-sm text-ink-soft hover:bg-paper-deep hover:text-ink">
             {tv(STR.mapNav)}
           </Link>
+
+          <div className="relative min-[521px]:hidden" ref={menuRef}>
+            <button
+              aria-label="Menu"
+              className="icon-btn flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-[15px] hover:bg-paper-deep"
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              ☰
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-11 z-[70] min-w-[140px] rounded-xl border border-line bg-surface p-1.5 card-shadow">
+                <Link
+                  to="/info"
+                  onClick={() => setMenuOpen(false)}
+                  className="block rounded-lg px-3 py-2 text-sm text-ink-soft hover:bg-paper-deep hover:text-ink"
+                >
+                  {tv(STR.info)}
+                </Link>
+                <Link
+                  to="/about"
+                  onClick={() => setMenuOpen(false)}
+                  className="block rounded-lg px-3 py-2 text-sm text-ink-soft hover:bg-paper-deep hover:text-ink"
+                >
+                  {tv(STR.about)}
+                </Link>
+              </div>
+            )}
+          </div>
 
           <div className="relative" ref={wrapRef}>
             <div className="relative flex items-center">

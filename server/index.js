@@ -141,6 +141,48 @@ app.get("/api/organic/crops", async (req, res) => {
   }
 });
 
+// GET /api/organic/all-crops - every named crop tile across all categories,
+// flattened, for a "find by produce" search/autocomplete.
+app.get("/api/organic/all-crops", async (req, res) => {
+  try {
+    const { cropIndex } = await getCache();
+    const seen = new Map(); // name -> total count (a crop can only have one leaf, so no merging needed)
+    for (const list of cropIndex.values()) {
+      for (const { name, count } of list) seen.set(name, count);
+    }
+    const crops = [...seen.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+    res.json({ crops });
+  } catch (err) {
+    console.error(err);
+    res.status(502).json({ error: "Failed to retrieve organic traceability data" });
+  }
+});
+
+// GET /api/organic/crop-counties?crop=X - county-level operator counts for one
+// specific crop, so "nearest vendor" can rank counties by distance without
+// needing to geocode every individual operator (organic-only: friendly list
+// rows carry no address, same constraint as the county map/meta counts).
+app.get("/api/organic/crop-counties", async (req, res) => {
+  try {
+    const { crop } = req.query;
+    if (!crop) return res.status(400).json({ error: "crop is required" });
+    const { rows } = await getCache();
+    const counts = new Map();
+    for (const row of rows) {
+      if (!row.county) continue;
+      if (splitCrops(row.ContainCrops).map(normalizeCrop).includes(crop)) {
+        counts.set(row.county, (counts.get(row.county) || 0) + 1);
+      }
+    }
+    res.json({ counties: [...counts.entries()].map(([name, count]) => ({ name, count })) });
+  } catch (err) {
+    console.error(err);
+    res.status(502).json({ error: "Failed to retrieve organic traceability data" });
+  }
+});
+
 // Friendly operators are enriched with their scraped detail page (cert
 // number, expiry, farm address, actual status, specific crops).
 async function getFriendlyOperator(id) {
