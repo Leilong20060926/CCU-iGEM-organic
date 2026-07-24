@@ -2,6 +2,9 @@ node_modules
 npm-debug.log
 .geocode-cache.json
 .geocode-query-cache.json
+.organic-cache.json
+.friendly-list-cache.json
+.friendly-detail-cache.json
 .git
 .gitignore
 Dockerfile

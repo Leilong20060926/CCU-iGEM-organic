@@ -219,3 +219,9 @@ __marimo__/
 
 # Geocoding cache (server)
 server/.geocode-cache.json
+server/.geocode-query-cache.json
+
+# Persisted upstream-data cache (server), so restarts don't block on a fresh fetch
+server/.organic-cache.json
+server/.friendly-list-cache.json
+server/.friendly-detail-cache.json

@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-COPY index.js taxonomy.js geocode.js friendly.js ./
+COPY *.js ./
 
 RUN addgroup -S app && adduser -S app -G app \
     && mkdir -p /app/cache \
@@ -14,6 +14,8 @@ USER app
 
 ENV PORT=3000
 ENV GEOCODE_CACHE_DIR=/app/cache
+ENV DATA_CACHE_DIR=/app/cache
+ENV FRIENDLY_CACHE_DIR=/app/cache
 EXPOSE 3000
 VOLUME ["/app/cache"]
 

@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const crypto = require("crypto");
+const path = require("path");
 const {
   CATEGORIES,
   TOKEN_LABELS_EN,
@@ -14,6 +15,7 @@ const {
 } = require("./taxonomy");
 const { geocodeAddress } = require("./geocode");
 const { getFriendlyCache, friendlyIdsForCrop, getFriendlyDetail } = require("./friendly");
+const { makeDiskCache } = require("./diskCache");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,7 +31,11 @@ const SORTABLE_FIELDS = [
 const STATUSES = ["通過", "結束", "終止", "暫終"];
 
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const DATA_CACHE_DIR = process.env.DATA_CACHE_DIR || __dirname;
+const diskCache = makeDiskCache(path.join(DATA_CACHE_DIR, ".organic-cache.json"));
+
 let cache = { rows: null, byId: null, cropIndex: null, fetchedAt: 0 };
+let refreshing = null; // in-flight refresh promise, dedupes concurrent triggers
 
 function makeId(row) {
   const hash = crypto
@@ -39,27 +45,58 @@ function makeId(row) {
   return hash.slice(0, 12);
 }
 
-async function getCache() {
-  const isFresh = cache.rows && Date.now() - cache.fetchedAt < CACHE_TTL_MS;
-  if (isFresh) return cache;
+function rowsToCache(rows, fetchedAt) {
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return { rows, byId, cropIndex: buildCropIndex(rows), fetchedAt };
+}
 
+// Load any previously persisted snapshot synchronously at startup, so the
+// very first request after a restart/redeploy is served instantly instead of
+// blocking on the upstream fetch (which can be slow, especially for the
+// friendly-farming scrape). Only a true first-ever run has nothing to load.
+(function loadFromDisk() {
+  const persisted = diskCache.load();
+  if (persisted && Array.isArray(persisted.rows)) {
+    cache = rowsToCache(persisted.rows, persisted.fetchedAt || 0);
+  }
+})();
+
+async function fetchFreshRows() {
   const res = await fetch(SOURCE_URL);
   if (!res.ok) {
     throw new Error(`Upstream request failed with status ${res.status}`);
   }
   const raw = await res.json();
+  return raw.map((row) => ({ ...row, id: makeId(row), certType: "organic", county: countyOf(row.Address) }));
+}
 
-  const byId = new Map();
-  const rows = raw.map((row) => {
-    const id = makeId(row);
-    const enriched = { ...row, id, certType: "organic", county: countyOf(row.Address) };
-    byId.set(id, enriched);
-    return enriched;
-  });
+function refreshCache() {
+  if (refreshing) return refreshing;
+  refreshing = fetchFreshRows()
+    .then((rows) => {
+      const fetchedAt = Date.now();
+      cache = rowsToCache(rows, fetchedAt);
+      diskCache.save({ rows, fetchedAt });
+      return cache;
+    })
+    .catch((err) => {
+      console.error("Failed to refresh organic data:", err.message);
+      throw err;
+    })
+    .finally(() => {
+      refreshing = null;
+    });
+  return refreshing;
+}
 
-  const cropIndex = buildCropIndex(rows);
-
-  cache = { rows, byId, cropIndex, fetchedAt: Date.now() };
+// Serves the current in-memory snapshot immediately, even if stale - a
+// background refresh is kicked off (not awaited) whenever it's past TTL, so
+// no request ever blocks on the slow upstream fetch except a true cold start
+// with nothing on disk yet.
+async function getCache() {
+  if (!cache.rows) return refreshCache();
+  const isStale = Date.now() - cache.fetchedAt >= CACHE_TTL_MS;
+  if (isStale) refreshCache().catch(() => {}); // already logged inside
   return cache;
 }
 

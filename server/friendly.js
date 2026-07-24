@@ -3,12 +3,18 @@
 // there is no open-data JSON endpoint, so this speaks to the same
 // CSRF-protected form endpoint the site's own frontend uses.
 
+const path = require("path");
+const { makeDiskCache } = require("./diskCache");
+
 const BASE = "https://epv.afa.gov.tw";
 const QUERY_PAGE = `${BASE}/Home/FriendlyIndustryQuery`;
 const QUERY_API = `${BASE}/Home/FriendlyIndustry`;
 const DETAIL_PAGE = `${BASE}/Home/IndustryInfo?TillageID=`;
 
 const CACHE_TTL_MS = 10 * 60 * 1000; // matches the organic list cache
+const CACHE_DIR = process.env.FRIENDLY_CACHE_DIR || __dirname;
+const listDiskCache = makeDiskCache(path.join(CACHE_DIR, ".friendly-list-cache.json"));
+const detailDiskCache = makeDiskCache(path.join(CACHE_DIR, ".friendly-detail-cache.json"));
 
 // --- CSRF session (anti-forgery cookie + form token pair) ---
 
@@ -101,20 +107,51 @@ function normalizeRow(raw) {
 }
 
 let listCache = { rows: null, byId: null, fetchedAt: 0 };
+let listRefreshing = null; // in-flight refresh promise, dedupes concurrent triggers
 
-async function getFriendlyCache() {
-  const isFresh = listCache.rows && Date.now() - listCache.fetchedAt < CACHE_TTL_MS;
-  if (isFresh) return listCache;
+// Load whatever was persisted last time, so a restart serves instantly
+// instead of blocking on the CSRF handshake + scrape.
+(function loadListFromDisk() {
+  const persisted = listDiskCache.load();
+  if (persisted && Array.isArray(persisted.rows)) {
+    listCache = {
+      rows: persisted.rows,
+      byId: new Map(persisted.rows.map((r) => [r.id, r])),
+      fetchedAt: persisted.fetchedAt || 0,
+    };
+  }
+})();
 
+async function fetchFreshFriendlyRows() {
   const data = await postQuery({});
-  const byId = new Map();
-  const rows = (data.rows || []).map((raw) => {
-    const row = normalizeRow(raw);
-    byId.set(row.id, row);
-    return row;
-  });
+  return (data.rows || []).map(normalizeRow);
+}
 
-  listCache = { rows, byId, fetchedAt: Date.now() };
+function refreshListCache() {
+  if (listRefreshing) return listRefreshing;
+  listRefreshing = fetchFreshFriendlyRows()
+    .then((rows) => {
+      const fetchedAt = Date.now();
+      listCache = { rows, byId: new Map(rows.map((r) => [r.id, r])), fetchedAt };
+      listDiskCache.save({ rows, fetchedAt });
+      return listCache;
+    })
+    .catch((err) => {
+      console.error("Failed to refresh friendly list:", err.message);
+      throw err;
+    })
+    .finally(() => {
+      listRefreshing = null;
+    });
+  return listRefreshing;
+}
+
+// Serves the current snapshot immediately (even if stale) and refreshes in
+// the background - only a true cold start with nothing on disk yet blocks.
+async function getFriendlyCache() {
+  if (!listCache.rows) return refreshListCache();
+  const isStale = Date.now() - listCache.fetchedAt >= CACHE_TTL_MS;
+  if (isStale) refreshListCache().catch(() => {}); // already logged inside
   return listCache;
 }
 
@@ -134,7 +171,27 @@ async function friendlyIdsForCrop(crop) {
 
 // --- detail page scrape ---
 
-const detailCache = new Map(); // tillageId -> parsed detail
+const detailCache = new Map(); // String(tillageId) -> parsed detail
+
+// Detail lookups happen one operator at a time (whenever a friendly detail
+// page is viewed), so unlike the list cache there's no periodic full refresh
+// to hook a background reload onto - persisted purely so previously-viewed
+// operators don't need re-scraping after a restart.
+(function loadDetailFromDisk() {
+  const persisted = detailDiskCache.load();
+  if (persisted && typeof persisted === "object") {
+    for (const [key, value] of Object.entries(persisted)) detailCache.set(key, value);
+  }
+})();
+
+let detailSaveTimer = null;
+function scheduleDetailSave() {
+  if (detailSaveTimer) return;
+  detailSaveTimer = setTimeout(() => {
+    detailSaveTimer = null;
+    detailDiskCache.save(Object.fromEntries(detailCache));
+  }, 2000);
+}
 
 function fieldValue(html, label) {
   const re = new RegExp(
@@ -152,7 +209,8 @@ function parseRocDate(text) {
 }
 
 async function getFriendlyDetail(tillageId) {
-  if (detailCache.has(tillageId)) return detailCache.get(tillageId);
+  const key = String(tillageId);
+  if (detailCache.has(key)) return detailCache.get(key);
 
   const res = await fetch(`${DETAIL_PAGE}${tillageId}`, {
     headers: { "Accept-Language": "zh-TW", cookie: "epv_lang=zh" },
@@ -176,7 +234,8 @@ async function getFriendlyDetail(tillageId) {
     containCrops: crops.join("、"),
   };
 
-  detailCache.set(tillageId, detail);
+  detailCache.set(key, detail);
+  scheduleDetailSave();
   return detail;
 }
 
