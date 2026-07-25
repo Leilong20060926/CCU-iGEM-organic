@@ -160,13 +160,25 @@ const MAX_CROPS_PER_LEAF = 40;
 // Raw ContainCrops entries that aren't crop names at all - just a
 // modifier/packaging/processing-state word ("國產" = domestic-origin,
 // "鹽燒" = salt-grilled, "截切"/"乾燥" = cut/dried with no crop attached,
-// "盒裝"/"袋裝"/"罐裝" = boxed/bagged/canned). Removing them from
-// CROP_CATEGORY_MAP alone isn't enough - buildCropIndex() below still
-// falls back to live-voting any crop it doesn't recognize, which would
-// otherwise resurrect these as tiles. Filtered out here so they never
-// reach the vote tally at all.
+// "脫殼" = dehulled/shelled with no crop attached, "盒裝"/"袋裝"/"罐裝" =
+// boxed/bagged/canned). Removing them from CROP_CATEGORY_MAP alone isn't
+// enough - buildCropIndex() below still falls back to live-voting any crop
+// it doesn't recognize, which would otherwise resurrect these as tiles.
+// Filtered out here so they never reach the vote tally at all.
 const CROP_NAME_BLOCKLIST = new Set([
-  "國產", "鹽燒", "截切", "乾燥", "盒裝", "袋裝", "罐裝",
+  "國產", "鹽燒", "截切", "乾燥", "脫殼", "盒裝", "袋裝", "罐裝",
+  // "種子(苗)" is a real-world category label token (see TOKEN_TO_CATEGORY),
+  // not a crop name - but stripBracketedContent reduces it to bare "種子"
+  // before this list is checked, so it must be blocked in its stripped form
+  // too or it resurfaces as a fake generic "seeds" tile.
+  "種子",
+  // Coffee bean origin/roast-style descriptors ("咖啡豆(耶加雪夫)",
+  // "咖啡豆(義式)"...) - not crop names. stripBracketedContent strips the
+  // "咖啡豆" wrapper in some source rows but leaves these bare in others,
+  // so they leak through as fake single-country/style "crop" tiles.
+  "耶加雪夫", "哥倫比亞", "多明尼加", "墨西哥", "秘魯", "瓜地馬拉",
+  "宏都拉斯", "藍山", "曼巴", "義大利", "義式", "玻利維亞", "法式",
+  "曼特寧", "巴布亞紐幾內亞", "尼加拉瓜", "厄瓜多",
 ]);
 
 // --- Manual crop corrections --------------------------------------------
@@ -194,6 +206,21 @@ const CERT_STATUS_SUFFIX = /[-－](有機轉型期|轉型期有機|有機|轉型
 // prefix above and trailing punctuation) -> canonical display name. Use this
 // to merge spelling variants / synonyms into a single crop tile.
 const CROP_ALIASES = {
+  "白毫烏龍": "烏龍茶",
+  "薑粉": "薑黃粉",
+  "大白柚": "白柚",
+  "四季柑": "金桔",
+  "葵瓜子": "葵花子",
+  "大豆": "黃豆",
+  "白薏仁": "薏仁",
+  "截切地瓜": "甘藷",
+  "截切包心白菜": "結球菜",
+  "包心萵苣": "結球萵苣",
+  "味美白菜": "味美菜",
+  "截切高麗菜": "甘藍",
+  "甘藍分切": "甘藍",
+  "山東白菜": "山東大白菜",
+  "鴻禧菇": "鴻喜菇",
   "胡麻": "芝麻",
   // Same thing ("rice, milled") written four different ways in the source
   // data - some fragments even missing the leading "米" entirely, likely
@@ -213,15 +240,173 @@ const CROP_ALIASES = {
   "紫洋蔥": "洋蔥",
   "紅蘿蔔": "胡蘿蔔",
   "白蘿蔔": "蘿蔔",
+  // Source data also contains a CJK compatibility-ideograph lookalike of
+  // "蘿" (U+F910, visually identical) for these 3 crops - normalize it to
+  // the real character so they merge with the correct 根莖菜 (root) entries
+  // instead of sitting as separate, wrongly-categorized ghost crops.
+  "蘿蔔": "蘿蔔",
+  "胡蘿蔔": "胡蘿蔔",
+  "櫻桃蘿蔔": "櫻桃蘿蔔",
   "轎篙筍": "茭白筍",
   "紅藜麥": "紅藜",
   "波蘿蜜": "波羅蜜",
   "乾洛神葵": "洛神葵乾",
   "高麗菜苗": "甘藍菜苗",
+  // 短期葉菜 (leafy greens) audit: pure spelling/character variants of the
+  // same vegetable, previously sitting as separate un-merged tiles.
+  "芥藍": "芥蘭",       // same crop as 芥蘭/芥蘭菜/格藍菜 above (Chinese kale)
+  "芥藍菜": "芥蘭",
+  "葉蘿蔔": "蘿蔔葉",   // "leaf-use radish" - same product, 3 spellings
+  "葉用蘿蔔": "蘿蔔葉",
+  "紅藜菜": "紅藜葉",   // red quinoa leaves - alternate name
+  "巴西里": "巴西利",   // parsley - character variant
+  "荷蘭芹": "巴西利",   // parsley - alternate common name
+  "土人蔘": "土人參",   // 蔘/參 character variant
+  "巴蔘": "巴蔘菜",     // 蔘/參 character variant
+  "巴參菜": "巴蔘菜",
+  "靑江菜": "青江菜",   // 靑 is a variant form of 青
+  "羅蔓萵苣": "蘿蔓萵苣", // romaine - transliteration variant (蘿/羅)
+  "羅美心": "蘿美心",   // romaine heart - transliteration variant (蘿/羅)
+  "蒜苗": "青蒜",       // garlic shoot - same crop as 青蒜 above (root/stem veg)
+  // 根莖菜 (root vegetables) audit: pure spelling/naming variants of the
+  // same crop, previously sitting as separate un-merged tiles.
+  "竹荀": "竹筍",         // 荀 is a typo for 筍
+  "石篙筍": "石篙竹筍",
+  "竹筍(石篙竹筍": "石篙竹筍", // malformed/unclosed bracket variant
+  "紅蔥": "紅蔥頭",       // shallot - short form of the name above
+  "火蔥": "紅蔥頭",       // shallot - Hokkien alternate name
+  "大蒜": "蒜頭",         // garlic - standard-Mandarin vs Taiwan-usage name
+  "蒜": "蒜頭",           // garlic - bare single-character form
+  "葱": "蔥",             // 葱 is a character variant of 蔥 (green onion)
+  "生薑": "薑",           // fresh ginger - same crop, longer form of the name
+  "紅根甜菜": "甜菜根",   // beetroot - alternate descriptive name
+  "木薯": "樹薯",         // cassava - alternate name
+  "竹芋": "葛鬱金",       // arrowroot (Maranta arundinacea) - alternate name
+  "芋莖": "芋頭梗",       // taro stalk - already merges with 芋梗 above
+  "芋頭莖": "芋頭梗",
+  "茴香頭": "球莖茴香",   // fennel bulb - alternate name
+  "香茅草": "檸檬草",     // lemongrass - alternate name (currently misfiled - see below)
+  "棗子": "棗",           // jujube - alternate name (currently misfiled - see below)
+  "菜瓜": "絲瓜",         // luffa/loofah - Taiwanese Hokkien alternate name (currently misfiled - see below)
   // Confirmed duplicate tiles per MOA "有機農業商品化資材及農產品品項" audit:
   // same crop, different name used by different operators in the source data.
   "地瓜": "甘藷",
+  "番薯": "甘藷",
   "薏苡": "薏仁",
+  "高梁": "高粱",
+  "栗米": "小米",
+  "粟米": "小米",
+  "甜根菜": "甜菜根",
+  "落花生": "花生",
+  "花生仁": "花生",
+  "乾燥黃豆": "黃豆",
+  "乾紅藜": "紅藜",
+  "乾燥紅藜": "紅藜",
+  "脫殼紅藜": "紅藜",
+  // Same category ("paddy's milled products"), one written with the
+  // literary particle "之" and one without - different operators, same
+  // real-world crop.
+  "稻穀碾製品": "稻穀之碾製品",
+  // 包葉菜 audit: descriptive generic terms for the same heading vegetable,
+  // not distinct varieties - merge into the canonical name.
+  "包心白菜": "大白菜",
+  "結球白菜": "大白菜",
+  "紫高麗菜": "紫甘藍",
+  "白花椰": "花椰菜",
+  // Synonyms found while auditing the veg:leafwrap bucket - same crop,
+  // different name, merged into one canonical tile.
+  "結球甘藍": "甘藍",
+  "孢子甘藍": "抱子甘藍",
+  "馬約蘭": "馬鬱蘭",
+  "芋梗": "芋頭梗",
+  "芥蘭菜": "芥蘭",
+  "格藍菜": "芥蘭", // "格藍菜" is a documented alt-name for 芥藍/芥蘭 (Chinese kale)
+  "雪蓮": "菊薯", // "雪蓮果" is the common name for yacon, whose proper crop name is 菊薯
+  // 花菜／果菜／豆菜／瓜菜 (veg:flowerfruit) audit: same crop, different
+  // spelling/writing, or a processing-note suffix left un-bracketed so
+  // stripBracketedContent doesn't catch it - merged into one canonical tile.
+  "小蕃茄": "小番茄",             // 蕃/番 character variant, same cherry tomato
+  "玉女小蕃茄": "玉女小番茄",     // same cultivar ("Yunu" cherry tomato), 3 spellings
+  "玉女番茄": "玉女小番茄",
+  "黑柿蕃茄": "黑柿番茄",         // 蕃/番 character variant, same tomato cultivar
+  "牛蕃茄": "牛番茄",             // 蕃/番 character variant, same beefsteak tomato
+  "哈蜜瓜": "哈密瓜",             // 蜜/密 character variant, same melon
+  "青花椰": "青花菜",             // alternate names for the same vegetable (broccoli)
+  "青花椰菜": "青花菜",
+  "青花菜筍": "青花筍",           // same product (broccolini-type flower stem), 2 names
+  "紫花椰": "紫花椰菜",           // short form of the same purple-cauliflower name
+  "澎湖絲瓜": "絲瓜",             // a loofah grown in Penghu, not a distinct crop
+  "食用玉米筍": "玉米筍",         // descriptive "edible" prefix, same crop
+  "其他：玉米筍": "玉米筍",       // stray category-prefixed variant of the same crop
+  "紅鬚帶殼玉米筍": "紅鬚玉米筍", // "帶殼" (in-husk) is a packaging note, not a different crop
+  "甜豌豆": "甜豆",               // same crop (sugar snap pea), alternate name
+  "碗豆": "豌豆",                 // common miswrite of 豌豆 (pea)
+  "敏豆": "四季豆",               // MOA-documented alt-name for the same bean (Phaseolus vulgaris)
+  "醜豆": "粉豆",                 // same flat-pod bean variety, alternate name
+  // Pre-cut/sliced variants with no dedicated crop entry - the processing
+  // note isn't bracketed in the source data so stripBracketedContent can't
+  // catch it. Merge into the base vegetable rather than keep as a separate
+  // tile.
+  "冬瓜分切": "冬瓜",
+  "冬瓜切片": "冬瓜",
+  "截切冬瓜": "冬瓜",
+  "南瓜分切": "南瓜",
+  "截切南瓜": "南瓜",
+  "南瓜塊": "南瓜",
+  "鮮切有機南瓜": "南瓜",
+  "截切大黃瓜": "大黃瓜",
+  "截切小黃瓜": "小黃瓜",
+  "截切扁蒲": "扁蒲",
+  "截切花胡瓜": "花胡瓜",
+  // 大／小漿果 (fruit:berry) audit (2026-07): same fruit, different name or
+  // character variant, previously sitting as separate un-merged tiles.
+  // Canonical form picked to match the root name already used by this
+  // fruit's own cultivar entries elsewhere in CROP_CATEGORY_MAP.
+  "芭樂": "番石榴",       // common Taiwan name for the same fruit as 番石榴, which is the official MOA item-list term (cultivars 水晶芭樂/紅心芭樂/芭樂芯 stay separate as named cultivars)
+  "紅龍果": "火龍果",     // MOA-formal name for the same fruit as 火龍果 (cultivars 紅肉/白肉火龍果 use "火龍果")
+  "釋迦": "番荔枝",       // common Taiwan name for the same fruit as 番荔枝, which is the official MOA item-list term (cultivar 鳳梨釋迦, an atemoya hybrid, stays separate)
+  "毛荔枝": "紅毛丹",     // alternate name ("hairy lychee") for the same fruit as 紅毛丹
+  "鳯梨釋迦": "鳳梨釋迦", // 鳯/鳳 character variant, same atemoya cultivar
+  "菠蘿蜜": "波羅蜜",     // 菠/波 character variant, same jackfruit
+  "桑葚": "桑椹",         // 葚/椹 character variant, same mulberry
+  "獼猴桃": "奇異果",     // mainland-Chinese name for the same fruit as 奇異果 (cultivar 綠奇異果 uses "奇異果")
+  "鰐梨": "酪梨",         // alternate name ("crocodile pear") for the same fruit as 酪梨
+  // fruit:citrus audit: same fruit, different name/abbreviation/character
+  // variant, previously sitting as separate un-merged tiles. Canonical form
+  // picked to match the more common Taiwan market name.
+  "金柑": "金棗",         // Japanese-derived alternate name for the same kumquat
+  // NOTE: 金桔 is deliberately NOT merged here. Although 橘/桔 are usually
+  // interchangeable, in everyday Taiwan usage "金桔" (as in 金桔檸檬) commonly
+  // refers to 四季桔 (calamondin), a different citrus hybrid from 金棗/金柑
+  // (kumquat) - not just a spelling variant of the same fruit.
+  "柳橙": "柳丁",         // formal/mainland name for the same fruit as 柳丁 (sweet orange)
+  "砂糖桔": "砂糖橘",     // 橘/桔 character variant, same sugar tangerine
+  "文旦柚": "文旦",       // full name for the same fruit as 文旦 (pomelo)
+  "茂谷": "茂谷柑",       // short form of the same Murcott mandarin cultivar
+  "肚臍橙": "臍橙",       // descriptive alternate name for the same navel orange
+  "晚崙西亞": "晚崙西亞橙", // short form of the same Valencia orange cultivar
+  "台灣香檬": "香檬",     // origin-qualified name for the same fruit as 香檬
+  // Per MOA agricultural guidance, Taiwan-grown "無籽檸檬" ("seedless lemon")
+  // is market slang for Tahiti lime (大溪地萊姆) - the same fruit sold as
+  // 萊姆, not actually a lemon cultivar (true lemons are seeded).
+  "無籽檸檬": "萊姆",
+  "桔子": "柑橘", // 橘/桔 character variant, same generic mandarin/tangerine name
+  // fruit:stonepome audit: "X子" is just the everyday diminutive form of
+  // the same fruit name already used by the plain form elsewhere in this
+  // category (桃/梅/柿/李), not a distinct cultivar - merge into one tile.
+  "桃子": "桃",
+  "梅子": "梅",
+  "柿子": "柿",
+  "李子": "李",
+  "沙梨": "梨", // "sand pear" is the historical/regional name for pear generally
+  "橘子": "柑橘",
+  "甜桔": "柑橘",
+  "酸桔": "柑橘",
+  "甜橙": "柳丁",
+  "香橙": "柳丁",
+  "扁實檸檬": "香檬",
+  "四季檸檬": "檸檬",
+  "海梨": "海梨橙",
 };
 
 // The source data very often appends a parenthetical to a crop name that
@@ -249,8 +434,21 @@ function stripBracketedContent(crop) {
 function stripStrayPunctuation(crop) {
   let s = crop.replace(/[。，,、]+$/, "");
   s = s.replace(/等$/, ""); // trailing "etc." left over from a truncated variety list
-  if (/[)）]$/.test(s) && !/[(（]/.test(s)) s = s.slice(0, -1); // unmatched trailing bracket only
-  if (/^[(（]/.test(s) && !/[)）]/.test(s)) s = s.slice(1); // unmatched leading bracket only
+  // Trailing unmatched closing bracket (any style: () [] （）【】) with no
+  // opening counterpart - leftover from stripBracketedContent removing a
+  // matched pair and leaving a stray mark, or from the field being split on
+  // "、" mid-phrase upstream so only the tail of a parenthetical survived
+  // (e.g. "乾燥]" from "咖啡生豆[經脫皮、乾燥]").
+  if (/[)）\]】]$/.test(s) && !/[(（[【]/.test(s)) s = s.slice(0, -1);
+  // Leading unmatched opening bracket (any style) with no closing counterpart.
+  if (/^[(（[【]/.test(s) && !/[)）\]】]/.test(s)) s = s.slice(1);
+  // Unmatched opening bracket mid-string with no closing counterpart anywhere -
+  // the head half of the same upstream split (e.g. "咖啡生豆[經脫皮" and
+  // "咖啡生豆(經脫皮" from the same truncated "咖啡生豆[經脫皮、乾燥]" field).
+  // Everything from the stray bracket onward is a truncated parenthetical,
+  // not part of the crop name, so it's cut off.
+  const openIdx = s.search(/[(（[【]/);
+  if (openIdx !== -1 && !/[)）\]】]/.test(s)) s = s.slice(0, openIdx);
   return s.trim();
 }
 
@@ -297,7 +495,6 @@ const CROP_FORCED_LEAF = {
   "矢車菊": "other", // cornflower - an ornamental/herbal flower
   "綠橡萵苣": "veg:leaf", // a lettuce variety, not a grain
   "紅藜葉": "veg:leaf", // the plant's edible leaves, not the grain
-  "紅藜菜": "veg:leaf", // same as above, alternate name
   "節瓜": "veg:flowerfruit", // fuzzy melon - a melon, not a head vegetable
   "紅辣椒": "veg:flowerfruit", // a chili pepper variety
   "青龍辣椒": "veg:flowerfruit", // a chili pepper variety
@@ -341,8 +538,10 @@ const CROP_FORCED_LEAF = {
   // 食用甘蔗 (eating sugarcane) is a root/stem vegetable, distinct from the
   // 特用作物 sugarcane grown for sugar production.
   "食用甘蔗": "veg:root",
-  // 椰子 (coconut) is a large-berry fruit tree, not a special/beverage crop.
-  "椰子": "fruit:berry",
+  // 椰子 (coconut) is officially classified under 堅果 (nuts) in MOA's
+  // 有機農產品類別及品項一覽表, alongside 杏仁/核桃/腰果/栗子/榛果 below -
+  // corrected from "fruit:berry" (2026-07 audit).
+  "椰子": "special",
   // 杏仁 (almond) is a nut, alongside 核桃/腰果/栗子 - was voting into
   // "processed" instead.
   "杏仁": "special",
@@ -451,15 +650,9 @@ const CROP_FORCED_LEAF = {
   "截切胡蘿蔔": "veg:root",
   "截切韭菜": "veg:root",
   "截切馬鈴薯": "veg:root",
-  "冬瓜分切": "veg:flowerfruit",
-  "冬瓜切片": "veg:flowerfruit",
-  "截切冬瓜": "veg:flowerfruit",
-  "南瓜分切": "veg:flowerfruit",
-  "截切南瓜": "veg:flowerfruit",
-  "截切大黃瓜": "veg:flowerfruit",
-  "截切小黃瓜": "veg:flowerfruit",
-  "截切扁蒲": "veg:flowerfruit",
-  "截切花胡瓜": "veg:flowerfruit",
+  // 冬瓜/南瓜/大黃瓜/小黃瓜/扁蒲/花胡瓜 pre-cut variants used to be forced
+  // here one by one; now merged into their base crop via CROP_ALIASES
+  // above, so they never reach this lookup as separate names any more.
   "奶油南瓜": "veg:flowerfruit",
   "栗南瓜": "veg:flowerfruit",
   "車輪南瓜": "veg:flowerfruit",
@@ -512,7 +705,6 @@ const CROP_FORCED_LEAF = {
   "乾金銀花": "processed",
   "奇異果乾": "processed",
   "黃金奇異果乾": "processed",
-  "獼猴桃": "fruit:berry",
   "乾靈芝": "processed",
   "香菇乾": "processed",
   "乾黑木耳": "processed",
@@ -552,6 +744,34 @@ const CROP_FORCED_LEAF = {
   "瀞‧有機茶": "processed",
   "野放紅茶": "processed",
   "茶包": "processed",
+  // --- 花菜／果菜／豆菜／瓜菜 (veg:flowerfruit) audit (2026-07) ---------
+  // Items below were voting/baked into the wrong leaf; corrected by name
+  // after auditing every entry in the flowerfruit bucket by hand.
+  // 1. Genuine flower/fruit/bean/melon vegetables sitting under the wrong
+  //    leaf (mostly veg:leaf) - moved in.
+  "甜豆": "veg:flowerfruit",       // sugar snap pea pod, not a leafy green
+  "蛇瓜": "veg:flowerfruit",       // snake gourd - a melon, not a leafy green
+  "角椒": "veg:flowerfruit",       // a chili pepper variety
+  "角瓜": "veg:flowerfruit",       // a ridged luffa/gourd variety
+  "雞心辣椒": "veg:flowerfruit",   // a chili pepper variety
+  "虎豆": "veg:flowerfruit",       // a pod-bean variety, like 皇帝豆
+  "櫛瓜花": "veg:flowerfruit",     // zucchini blossom - an edible flower, like 金針花
+  // 2. Non-vegetables that had drifted into veg:flowerfruit - moved out to
+  //    their real category.
+  "明尼桔柚": "fruit:citrus",      // Minneola tangelo - a citrus fruit
+  "晶圓梨": "fruit:stonepome",     // a pear cultivar
+  "印度棗": "fruit:stonepome",     // Indian jujube (ber) - same family as 棗
+  "蜜棗": "fruit:stonepome",       // a jujube cultivar, same family as 棗
+  "人心果": "fruit:berry",         // sapodilla - a soft tree fruit
+  "夏威夷豆": "special",           // macadamia nut, alongside 核桃/腰果/杏仁
+  "珠蔥": "veg:root",              // a bunching shallot, like 蔥/紅蔥頭
+  "碧玉筍": "veg:root",            // the tender stem of the 金針 (daylily) plant, not its flower
+  "牛膝": "other",                 // an herbal medicine root
+  "甜羅勒": "other",               // basil - a culinary herb, like 九層塔
+  "神香草": "other",               // hyssop - a culinary/medicinal herb
+  "風茹草": "other",               // an herb
+  "香草": "other",                 // herb (generic term)
+  "龍眼花": "other",               // longan blossom, used for tea/honey, like other edible flowers
 };
 
 // Fallback for crops CROP_FORCED_LEAF doesn't exact-match because the source
@@ -571,96 +791,54 @@ function patternForcedLeaf(crop) {
   return null;
 }
 
-// Data-driven crop -> leaf-category mapping, generated once from a live snapshot
-// of the MOA dataset by tallying (per buildCropIndex below) which leaf category
-// each crop's growers actually belong to. Baked in as a static table instead of
-// recomputed on every fetch: a crop's real-world category does not change from one
-// data refresh to the next, so there is no reason to keep re-voting on it - this
-// also makes the tiles immune to any future data glitch skewing the vote.
-// Regenerate by running scripts/generate-crop-category-map.js against a fresh
-// snapshot if the dataset's crop vocabulary changes substantially.
-// Data-driven crop -> leaf-category mapping, generated once from a live snapshot
-// of the MOA dataset by tallying (per buildCropIndex below) which leaf category
-// each crop's growers actually belong to. Baked in as a static table instead of
-// recomputed on every fetch: a crop's real-world category does not change from one
-// data refresh to the next, so there is no reason to keep re-voting on it - this
-// also makes the tiles immune to any future data glitch skewing the vote. Manual
-// corrections (CROP_FORCED_LEAF above) always take priority over this table.
-// Regenerate against a fresh snapshot if the dataset's crop vocabulary changes
-// substantially (see the generation steps in the project notes).
-// Data-driven crop -> leaf-category mapping, generated once from a live snapshot
-// of the MOA dataset by tallying (per buildCropIndex below) which leaf category
-// each crop's growers actually belong to. Baked in as a static table instead of
-// recomputed on every fetch: a crop's real-world category does not change from one
-// data refresh to the next, so there is no reason to keep re-voting on it - this
-// also makes the tiles immune to any future data glitch skewing the vote. Manual
-// corrections (CROP_FORCED_LEAF above) always take priority over this table.
-// Regenerate against a fresh snapshot if the dataset's crop vocabulary changes
-// substantially (see the generation steps in the project notes).
-// Data-driven crop -> leaf-category mapping, generated once from a live snapshot
-// of the MOA dataset by tallying (per buildCropIndex below) which leaf category
-// each crop's growers actually belong to. Baked in as a static table instead of
-// recomputed on every fetch: a crop's real-world category does not change from one
-// data refresh to the next, so there is no reason to keep re-voting on it - this
-// also makes the tiles immune to any future data glitch skewing the vote. Manual
-// corrections (CROP_FORCED_LEAF above) always take priority over this table.
-// Regenerate against a fresh snapshot if the dataset's crop vocabulary changes
-// substantially (see the generation steps in the project notes).
-// Data-driven crop -> leaf-category mapping, generated once from a live snapshot
-// of the MOA dataset by tallying (per buildCropIndex below) which leaf category
-// each crop's growers actually belong to. Baked in as a static table instead of
-// recomputed on every fetch: a crop's real-world category does not change from one
-// data refresh to the next, so there is no reason to keep re-voting on it - this
-// also makes the tiles immune to any future data glitch skewing the vote. Manual
-// corrections (CROP_FORCED_LEAF above) always take priority over this table.
-// Regenerate against a fresh snapshot if the dataset's crop vocabulary changes
-// substantially (see the generation steps in the project notes).
+// Data-driven crop -> leaf-category mapping, generated once from a live
+// snapshot of the MOA dataset by tallying (per buildCropIndex below) which
+// leaf category each crop's growers actually belong to. Baked in as a
+// static table instead of recomputed on every fetch: a crop's real-world
+// category does not change from one data refresh to the next, so there is
+// no reason to keep re-voting on it - this also makes the tiles immune to
+// any future data glitch skewing the vote. Manual corrections
+// (CROP_FORCED_LEAF above) always take priority over this table. Regenerate
+// by running scripts/generate-crop-category-map.js against a fresh snapshot
+// if the dataset's crop vocabulary changes substantially.
+//
+// Entries are grouped by leaf category with a "// <leaf> (<count>)" header -
+// keep it that way. When correcting a crop's category, MOVE the line into
+// its new section (and update both counts) rather than just changing the
+// value in place; a correct value sitting under the wrong header is exactly
+// the kind of drift a full audit had to clean up once already.
 const CROP_CATEGORY_MAP = {
-  // rice (14)
+  // rice (11)
   "稻穀": "rice",
-  "白米": "rice",
-  "糙米": "rice",
   "稻穀之碾製品": "rice",
   "水稻": "rice",
   "水稻及其碾製品": "rice",
-  "胚芽米": "rice",
   "乾穀": "rice",
-  "黑米": "rice",
-  "米碾製品": "rice",
-  "黑糙米": "rice",
   "碾製米": "rice",
   "米麵條": "rice",
-  "白薏仁": "rice",
-  // staple (124)
+  "紅糯糙米": "rice",
+  "紅糯米": "rice",
+  "糯米": "rice",
+  "紫米": "rice", // a rice variety, like 紅糯米/糯米
+  // staple (49)
   "甘藷": "staple",
-  "黑豆": "staple",
-  "黃豆": "staple",
   "花生": "staple",
   "紅藜": "staple",
   "紅豆": "staple",
-  "小麥": "staple",
-  "綠豆": "staple",
   "小米": "staple",
   "樹豆": "staple",
   "芝麻": "staple",
-  "蕎麥": "staple",
   "硬質玉米": "staple",
-  "薏苡": "staple",
   "地瓜": "staple",
-  "高粱": "staple",
-  "薏仁": "staple",
-  "燕麥": "staple",
+  "白薏仁": "staple",
   "葵花子": "staple",
-  "大麥": "staple",
   "黑芝麻": "staple",
   "高梁": "staple",
   "栗子地瓜": "staple",
-  "大豆": "staple",
   "種子": "staple",
   "雞豆": "staple",
   "斑豆": "staple",
   "藜麥": "staple",
-  "過貓": "staple",
   "赤小豆": "staple",
   "白豆": "staple",
   "金時地瓜": "staple",
@@ -668,430 +846,188 @@ const CROP_CATEGORY_MAP = {
   "野米": "staple",
   "青皮豆": "staple",
   "栗米": "staple",
-  "甜美人西瓜": "staple",
-  "果醬": "staple",
   "番薯": "staple",
-  "火焰菜": "staple",
   "紫心地瓜": "staple",
-  "人蔘山藥": "staple",
   "白芝麻": "staple",
-  "紅糯糙米": "staple",
-  "黃玉米": "staple",
-  "香茅乾": "staple",
-  "乾桂花": "staple",
   "珍珠豆": "staple",
   "黑麥": "staple",
-  "黑美人西瓜": "staple",
   "粟米": "staple",
-  "甜根菜": "staple",
-  "日本山藥": "staple",
-  "梅乾菜": "staple",
-  "米脆": "staple",
   "截切地瓜": "staple",
-  "黑麥粉": "staple",
   "米豆": "staple",
-  "山甜菜": "staple",
-  "桋梧": "staple",
-  "香橙": "staple",
-  "五鮮菇": "staple",
   "珍珠大麥": "staple",
-  "太白粉": "staple",
-  "乾燥蒜頭": "staple",
   "乾燥紅藜": "staple",
-  "豇豆乾": "staple",
-  "乾艾草": "staple",
-  "乾金盞花": "staple",
-  "百里香乾": "staple",
-  "檸檬馬鞭草乾": "staple",
-  "蟛蜞菊": "staple",
   "落花生": "staple",
-  "馬鈴薯乾": "staple",
-  "玉米脆片": "staple",
-  "紫錐": "staple",
-  "米香": "staple",
-  "水晶芭樂": "staple",
-  "橙蜜香番茄": "staple",
-  "南瓜鬚": "staple",
-  "苦苣": "staple",
   "黃仁黑豆": "staple",
   "棕色亞麻子": "staple",
-  "低筋麵粉": "staple",
-  "桔子": "staple",
   "脫殼紅藜": "staple",
-  "苦楝": "staple",
-  "乾鼠尾草": "staple",
-  "巧克力薄荷": "staple",
-  "斑蘭葉": "staple",
-  "接骨木乾": "staple",
   "花生仁": "staple",
-  "紅冠萵苣": "staple",
-  "水田芥": "staple",
-  "咸豐草乾": "staple",
-  "蕃茄乾": "staple",
-  "小麥茶": "staple",
-  "黃香瓜": "staple",
-  "截切紅蘿蔔": "staple",
   "白鳳豆": "staple",
-  "蓮蓬": "staple",
-  "高麗菜嬰": "staple",
-  "紅皮馬鈴薯": "staple",
-  "香蔥": "staple",
-  "食用花卉(玫瑰花": "staple",
-  "長豆乾": "staple",
   "乾燥黃豆": "staple",
-  "A菜心": "staple",
-  "南瓜塊": "staple",
-  "茄茉菜": "staple",
   "甜高粱": "staple",
-  "甘藍菜芽": "staple",
-  "茶樹": "staple",
-  "黑糯玉米": "staple",
-  "山肉桂": "staple",
   "黃肉地瓜": "staple",
   "紅肉地瓜": "staple",
-  "白雪耳": "staple",
   "乾紅藜": "staple",
-  "水果彩椒": "staple",
-  "美麗紅菜苔": "staple",
-  "油菜(青松菜": "staple",
-  // special (97)
+  "黃地瓜": "staple",
+  "紅地瓜": "staple",
+  "花豆": "staple", // a bean/legume, like other 雜糧 beans
+  // special (46)
   "咖啡鮮果": "special",
   "茶菁": "special",
-  "茶葉": "special",
-  "茶乾": "special",
-  "咖啡豆": "special",
-  "食用甘蔗": "special",
   "澳洲茶樹": "special",
   "咖啡生豆": "special",
-  "咖啡粉": "special",
-  "狼尾草": "special",
-  "椰子": "special",
-  "紅茶": "special",
-  "牧草": "special",
-  "白茶": "special",
-  "烏龍茶": "special",
-  "綠茶": "special",
+  "狼尾草": "other",   // forage grass, not a specialty crop
+  "牧草": "other",     // pasture/forage grass, not a specialty crop
   "核桃": "special",
   "腰果": "special",
-  "青割玉米": "special",
-  "包種茶": "special",
+  "青割玉米": "other", // silage/forage corn, not a specialty crop
   "栗子": "special",
-  "茶包": "special",
-  "蜜香紅茶": "special",
-  "紅玉紅茶": "special",
-  "東方美人茶": "special",
   "咖啡生豆(經脫皮": "special",
-  "佳葉龍茶": "special",
   "製糖甘蔗": "special",
   "茶花": "special",
-  "清香烏龍茶": "special",
-  "盤固草": "special",
-  "高山烏龍茶": "special",
-  "綠茶粉": "special",
+  "盤固草": "other",   // forage grass, not a specialty crop
   "咖啡葉": "special",
-  "GABA茶": "special",
   "濾掛式咖啡": "special",
   "葵瓜子": "special",
-  "紅烏龍茶": "special",
-  "金萱茶": "special",
   "胡椒": "special",
   "胡桃": "special",
   "鐵觀音": "special",
-  "紅茶茶包": "special",
-  "咖啡葉茶": "special",
-  "凍頂烏龍茶": "special",
   "紅玉": "special",
-  "榛果": "special",
   "板栗": "special",
   "紅烏龍": "special",
-  "奶油南瓜": "special",
-  "蜜香紅茶茶包": "special",
   "葵瓜子仁": "special",
   "咖啡生豆[經脫皮": "special",
-  "乾燥蝶豆花": "special",
-  "金萱綠茶": "special",
-  "阿薩姆紅茶": "special",
-  "黃茶": "special",
   "桑樹": "special",
   "香草植物": "special",
-  "綠茶茶包": "special",
-  "乾金銀花": "special",
-  "玫瑰紅茶": "special",
-  "段木木耳": "special",
   "烘焙咖啡豆": "special",
-  "乾燥咖啡葉": "special",
-  "高山紅茶": "special",
   "牛膝草": "special",
-  "茶粉": "special",
-  "極品包種茶": "special",
-  "極品綠茶": "special",
   "青荷": "special",
-  "乾月桂葉": "special",
-  "瀞‧有機茶": "special",
-  "蜜香紅茶包": "special",
   "東方美人": "special",
   "白毫烏龍": "special",
   "杏核": "special",
-  "土肉桂茶": "special",
-  "尼羅草": "special",
-  "燕麥草": "special",
-  "乾燥野薑花": "special",
-  "乾燥菊花": "special",
-  "乾燥香蜂草": "special",
-  "獼猴桃": "special",
+  "尼羅草": "other",   // forage grass, not a specialty crop
+  "燕麥草": "other",   // forage grass, not a specialty crop
   "酸漿果": "special",
   "綠薄荷": "special",
   "胡椒薄荷": "special",
-  "老欉山茶": "special",
-  "紅玉白茶": "special",
   "芡實": "special",
   "關刀豆": "special",
-  "乾燥檸檬馬鞭草": "special",
-  "野放紅茶": "special",
-  "奇異果乾": "special",
-  "黃金奇異果乾": "special",
-  // veg:leafwrap (215)
+  "澳洲胡桃": "special",      // macadamia nut, alongside 核桃/腰果/杏仁/夏威夷豆
+  "可可果": "special",        // cacao pod, alongside 茶/咖啡 as a beverage/special crop
+  "松子": "special", // pine nut - a tree nut, consistent with 核桃/腰果/榛果
+  "南瓜子": "special", // pumpkin seed - a seed/nut, alongside 葵瓜子
+  "棉花": "special", // cotton - a non-food fiber crop ("非供食用之作物")
+  "苧麻": "special", // ramie - a non-food fiber crop ("非供食用之作物")
+  // veg:leafwrap (35)
   "甘藍": "veg:leafwrap",
-  "包心白菜": "veg:leafwrap",
   "結球萵苣": "veg:leafwrap",
   "半結球萵苣": "veg:leafwrap",
   "包心芥菜": "veg:leafwrap",
-  "結球白菜": "veg:leafwrap",
   "山東大白菜": "veg:leafwrap",
-  "大芥菜": "veg:leafwrap",
-  "青花菜筍": "veg:leafwrap",
   "半結球白菜": "veg:leafwrap",
-  "芹菜管": "veg:leafwrap",
-  "白葉菜": "veg:leafwrap",
   "大白菜": "veg:leafwrap",
-  "高麗菜芽": "veg:leafwrap",
-  "紫高麗菜": "veg:leafwrap",
-  "格蘭菜": "veg:leafwrap",
-  "紅杏菜": "veg:leafwrap",
-  "甜萵苣": "veg:leafwrap",
-  "甜菜根葉": "veg:leafwrap",
   "翡翠娃娃菜": "veg:leafwrap",
-  "長年菜": "veg:leafwrap",
-  "扁葉芥菜": "veg:leafwrap",
-  "綠杏菜": "veg:leafwrap",
   "紫甘藍": "veg:leafwrap",
-  "葉蘿蔔": "veg:leafwrap",
-  "皺葉萵苣": "veg:leafwrap",
-  "格蘭菜花": "veg:leafwrap",
   "結球菜": "veg:leafwrap",
-  "甜茴香": "veg:leafwrap",
-  "青莧菜": "veg:leafwrap",
-  "碗豆": "veg:leafwrap",
-  "紫花椰菜": "veg:leafwrap",
-  "冬瓜切片": "veg:leafwrap",
   "雪翠高麗菜": "veg:leafwrap",
   "黃金白菜": "veg:leafwrap",
-  "廣島野菜": "veg:leafwrap",
   "天津白菜": "veg:leafwrap",
-  "青花椰菜": "veg:leafwrap",
-  "刈菜": "veg:leafwrap",
-  "白花椰": "veg:leafwrap",
-  "黃花芥藍": "veg:leafwrap",
-  "香瓜茄": "veg:leafwrap",
-  "牛皮菜": "veg:leafwrap",
-  "紅橡萵苣": "veg:leafwrap",
-  "甜油菜心": "veg:leafwrap",
-  "美松菜": "veg:leafwrap",
-  "薑黃乾": "veg:leafwrap",
-  "紅蔥": "veg:leafwrap",
-  "糯米辣椒": "veg:leafwrap",
-  "茼萵": "veg:leafwrap",
   "抱子甘藍": "veg:leafwrap",
-  "青花椰": "veg:leafwrap",
   "蘿蔓心": "veg:leafwrap",
-  "青龍油菜": "veg:leafwrap",
-  "青江白菜": "veg:leafwrap",
   "山東白菜": "veg:leafwrap",
-  "白玉苦瓜": "veg:leafwrap",
-  "雪裡紅": "veg:leafwrap",
-  "大莢豌豆": "veg:leafwrap",
-  "蕪菁": "veg:leafwrap",
   "翠玉白菜": "veg:leafwrap",
-  "鵲豆": "veg:leafwrap",
-  "歐芹": "veg:leafwrap",
-  "紫花椰": "veg:leafwrap",
-  "冬瓜分切": "veg:leafwrap",
-  "蛋茄": "veg:leafwrap",
-  "格藍菜": "veg:leafwrap",
-  "莖用芥菜": "veg:leafwrap",
-  "鳳梨鼠尾草": "veg:leafwrap",
-  "黑芥藍菜": "veg:leafwrap",
-  "茴香頭": "veg:leafwrap",
-  "芥藍菜筍": "veg:leafwrap",
   "抱子芥菜": "veg:leafwrap",
-  "菾菜(含莙蓬菜": "veg:leafwrap",
-  "中國A菜": "veg:leafwrap",
   "翠玉娃娃白菜": "veg:leafwrap",
-  "葉用黃麻": "veg:leafwrap",
-  "芥蘭": "veg:leafwrap",
-  "黃地瓜": "veg:leafwrap",
-  "馬鬱蘭": "veg:leafwrap",
-  "綠寶石": "veg:leafwrap",
-  "莧菜(白莧菜": "veg:leafwrap",
-  "紅翠A菜": "veg:leafwrap",
-  "黑柿蕃茄": "veg:leafwrap",
-  "截切冬瓜": "veg:leafwrap",
-  "長辣椒": "veg:leafwrap",
-  "截切小松菜": "veg:leafwrap",
-  "截切空心菜": "veg:leafwrap",
-  "截切莧菜": "veg:leafwrap",
-  "截切油菜": "veg:leafwrap",
-  "芋頭梗": "veg:leafwrap",
-  "乾燥山苦瓜片": "veg:leafwrap",
-  "結球甘藍": "veg:leafwrap",
-  "瑞士甜菜": "veg:leafwrap",
-  "小西瓜": "veg:leafwrap",
-  "芥蘭菜": "veg:leafwrap",
-  "菊花乾": "veg:leafwrap",
-  "白玉米": "veg:leafwrap",
-  "紅地瓜": "veg:leafwrap",
-  "截切南瓜": "veg:leafwrap",
-  "錦絲菜": "veg:leafwrap",
-  "綠寶石A菜": "veg:leafwrap",
   "葉菜甘藷": "veg:leafwrap",
-  "辣椒(青龍椒": "veg:leafwrap",
-  "甜菜葉": "veg:leafwrap",
   "高山高麗菜": "veg:leafwrap",
-  "羽衣芥藍": "veg:leafwrap",
-  "小辣椒": "veg:leafwrap",
-  "秀珍菜": "veg:leafwrap",
   "包心萵苣": "veg:leafwrap",
-  "車輪南瓜": "veg:leafwrap",
   "截切包心白菜": "veg:leafwrap",
-  "截切菠菜": "veg:leafwrap",
-  "截切青松菜": "veg:leafwrap",
   "鋸齒白菜": "veg:leafwrap",
-  "大辣椒": "veg:leafwrap",
-  "黑寶玉米": "veg:leafwrap",
-  "截切蕹菜": "veg:leafwrap",
-  "莙薘菜": "veg:leafwrap",
-  "日本水菜": "veg:leafwrap",
-  "孢子甘藍": "veg:leafwrap",
-  "甜麻": "veg:leafwrap",
-  "草石蠶": "veg:leafwrap",
-  "韓國芝麻葉": "veg:leafwrap",
-  "金寶菜": "veg:leafwrap",
-  "玉女小蕃茄": "veg:leafwrap",
-  "塔姑菜": "veg:leafwrap",
-  "紅小辣椒": "veg:leafwrap",
-  "本島A菜": "veg:leafwrap",
-  "奶油A菜": "veg:leafwrap",
-  "半包A菜": "veg:leafwrap",
-  "皺葉A菜": "veg:leafwrap",
-  "雪蓮": "veg:leafwrap",
-  "菊薯": "veg:leafwrap",
   "甘藍(高麗菜": "veg:leafwrap",
   "黃金包心白菜": "veg:leafwrap",
-  "白蘆筍": "veg:leafwrap",
-  "山葵葉": "veg:leafwrap",
-  "巴參菜": "veg:leafwrap",
-  "截切青江菜": "veg:leafwrap",
-  "截切葉菜甘藷": "veg:leafwrap",
-  "截切味美菜": "veg:leafwrap",
-  "截切小白菜": "veg:leafwrap",
-  "截切A菜": "veg:leafwrap",
   "半結球萵苣(福山萵苣": "veg:leafwrap",
-  "圓茄": "veg:leafwrap",
-  "紫玉米": "veg:leafwrap",
-  "當歸葉": "veg:leafwrap",
-  "馬約蘭": "veg:leafwrap",
-  "角豆": "veg:leafwrap",
-  "大阪青松菜": "veg:leafwrap",
-  "小蕃茄": "veg:leafwrap",
-  "大番茄": "veg:leafwrap",
-  "芥藍菜芽": "veg:leafwrap",
-  "檳榔心芋": "veg:leafwrap",
-  "鴨兒芹": "veg:leafwrap",
-  "木耳菜": "veg:leafwrap",
-  "綠珍菜": "veg:leafwrap",
   "甘藍分切": "veg:leafwrap",
-  "橡木萵苣": "veg:leafwrap",
-  "萵苣菜": "veg:leafwrap",
   "波士頓奶油萵苣": "veg:leafwrap",
-  "韭蔥": "veg:leafwrap",
-  "南瓜分切": "veg:leafwrap",
-  "栗南瓜": "veg:leafwrap",
-  "彩色菾菜": "veg:leafwrap",
   "千寶白菜": "veg:leafwrap",
   "味美白菜": "veg:leafwrap",
   "半結球萵苣(蘿蔓": "veg:leafwrap",
-  "綠火焰萵苣": "veg:leafwrap",
   "包心芥菜(大芥菜": "veg:leafwrap",
-  "截切萵苣": "veg:leafwrap",
-  "截切青油菜": "veg:leafwrap",
-  "截切千寶菜": "veg:leafwrap",
-  "紅鬚帶殼玉米筍": "veg:leafwrap",
-  "莧菜(紅莧": "veg:leafwrap",
-  "菠菱菜": "veg:leafwrap",
   "截切高麗菜": "veg:leafwrap",
-  "截切胡蘿蔔": "veg:leafwrap",
-  "截切馬鈴薯": "veg:leafwrap",
-  "蒜頭粒": "veg:leafwrap",
-  "高麗菜筍": "veg:leafwrap",
-  "野人參": "veg:leafwrap",
-  "芋梗": "veg:leafwrap",
-  "粉蔥": "veg:leafwrap",
-  "糯米玉米": "veg:leafwrap",
-  "蠶豆": "veg:leafwrap",
   "優愛白菜": "veg:leafwrap",
-  "杏菜": "veg:leafwrap",
-  "日本山菠菜": "veg:leafwrap",
-  "蘿蔔": "veg:leafwrap",
-  "胡蘿蔔": "veg:leafwrap",
-  "櫻桃蘿蔔": "veg:leafwrap",
-  "彩色蘿蔔": "veg:leafwrap",
-  "玫瑰乾": "veg:leafwrap",
-  "牛奶玉米": "veg:leafwrap",
-  "白玉蘿蔔": "veg:leafwrap",
-  "段木乾香菇": "veg:leafwrap",
-  "小菊花": "veg:leafwrap",
-  "紅芥菜": "veg:leafwrap",
-  "油菜(小松菜": "veg:leafwrap",
-  "短茄": "veg:leafwrap",
-  "截切白菜": "veg:leafwrap",
-  "截切韭菜": "veg:leafwrap",
-  "水果絲瓜": "veg:leafwrap",
-  "截切茼蒿": "veg:leafwrap",
-  "截切地瓜葉": "veg:leafwrap",
-  "截切山茼蒿": "veg:leafwrap",
-  "截切油江菜": "veg:leafwrap",
-  "截切大黃瓜": "veg:leafwrap",
-  "截切花胡瓜": "veg:leafwrap",
-  "截切小黃瓜": "veg:leafwrap",
-  "截切扁蒲": "veg:leafwrap",
-  "青茄茉菜": "veg:leafwrap",
-  // veg:leaf (308)
+  // veg:leaf (281)
+  "瑞士甜菜": "veg:leaf",
+  "山葵葉": "veg:leaf",
+  "茼萵": "veg:leaf",
+  "青龍油菜": "veg:leaf",
+  "青江白菜": "veg:leaf",
+  "雪裡紅": "veg:leaf",
+  "黑芥藍菜": "veg:leaf",
+  "菾菜(含莙蓬菜": "veg:leaf",
+  "中國A菜": "veg:leaf",
+  "葉用黃麻": "veg:leaf",
+  "芥蘭": "veg:leaf",
+  "綠寶石": "veg:leaf",
+  "紅翠A菜": "veg:leaf",
+  "錦絲菜": "veg:leaf",
+  "綠寶石A菜": "veg:leaf",
+  "甜菜葉": "veg:leaf",
+  "羽衣芥藍": "veg:leaf",
+  "秀珍菜": "veg:leaf",
+  "莙薘菜": "veg:leaf",
+  "日本水菜": "veg:leaf",
+  "甜麻": "veg:leaf",
+  "韓國芝麻葉": "veg:leaf",
+  "金寶菜": "veg:leaf",
+  "塔姑菜": "veg:leaf",
+  "本島A菜": "veg:leaf",
+  "奶油A菜": "veg:leaf",
+  "半包A菜": "veg:leaf",
+  "皺葉A菜": "veg:leaf",
+  "大阪青松菜": "veg:leaf",
+  "木耳菜": "veg:leaf",
+  "綠珍菜": "veg:leaf",
+  "橡木萵苣": "veg:leaf",
+  "萵苣菜": "veg:leaf",
+  "彩色菾菜": "veg:leaf",
+  "綠火焰萵苣": "veg:leaf",
+  "菠菱菜": "veg:leaf",
+  "杏菜": "veg:leaf",
+  "日本山菠菜": "veg:leaf",
+  "紅芥菜": "veg:leaf",
+  "油菜(小松菜": "veg:leaf",
+  "青茄茉菜": "veg:leaf",
+  "過貓": "veg:leaf",
+  "山甜菜": "veg:leaf",
+  "茄茉菜": "veg:leaf",
+  "大芥菜": "veg:leaf",
+  "格蘭菜": "veg:leaf",
+  "甜萵苣": "veg:leaf",
+  "長年菜": "veg:leaf",
+  "扁葉芥菜": "veg:leaf",
+  "皺葉萵苣": "veg:leaf",
+  "廣島野菜": "veg:leaf",
+  "刈菜": "veg:leaf",
+  "牛皮菜": "veg:leaf",
+  "紅橡萵苣": "veg:leaf",
+  "美松菜": "veg:leaf",
   "萵苣": "veg:leaf",
   "葉菜甘藷": "veg:leaf",
   "菠菜": "veg:leaf",
-  "蔥": "veg:leaf",
   "白菜": "veg:leaf",
   "蕹菜": "veg:leaf",
   "茼蒿": "veg:leaf",
   "莧菜": "veg:leaf",
   "油菜": "veg:leaf",
   "青江菜": "veg:leaf",
-  "芥藍": "veg:leaf",
   "芹菜": "veg:leaf",
-  "韭菜": "veg:leaf",
   "紅鳳菜": "veg:leaf",
   "芫荽": "veg:leaf",
   "洛葵": "veg:leaf",
-  "青蒜": "veg:leaf",
-  "九層塔": "veg:leaf",
   "龍鬚菜": "veg:leaf",
   "菾菜": "veg:leaf",
   "菊苣": "veg:leaf",
   "青松菜": "veg:leaf",
   "紫蘇": "veg:leaf",
-  "甘藍菜苗": "veg:leaf",
   "小松菜": "veg:leaf",
-  "葉用蘿蔔": "veg:leaf",
   "芝麻菜": "veg:leaf",
   "芥菜": "veg:leaf",
   "白鳳菜": "veg:leaf",
@@ -1099,7 +1035,6 @@ const CROP_CATEGORY_MAP = {
   "山芹菜": "veg:leaf",
   "韭菜花": "veg:leaf",
   "羽衣甘藍": "veg:leaf",
-  "西洋芹菜": "veg:leaf",
   "味美菜": "veg:leaf",
   "黑葉白菜": "veg:leaf",
   "馬齒莧": "veg:leaf",
@@ -1108,12 +1043,10 @@ const CROP_CATEGORY_MAP = {
   "小白菜": "veg:leaf",
   "塔菇菜": "veg:leaf",
   "山菠菜": "veg:leaf",
-  "靑江菜": "veg:leaf",
   "奶油白菜": "veg:leaf",
   "荷葉白菜": "veg:leaf",
   "廣島菜": "veg:leaf",
   "小芥菜": "veg:leaf",
-  "豌豆苗": "veg:leaf",
   "千寶菜": "veg:leaf",
   "甜菜心": "veg:leaf",
   "福山萵苣": "veg:leaf",
@@ -1148,7 +1081,6 @@ const CROP_CATEGORY_MAP = {
   "香菜": "veg:leaf",
   "京水菜": "veg:leaf",
   "大陸妹": "veg:leaf",
-  "青蔥": "veg:leaf",
   "角菜": "veg:leaf",
   "綠莧菜": "veg:leaf",
   "芝麻葉": "veg:leaf",
@@ -1161,21 +1093,16 @@ const CROP_CATEGORY_MAP = {
   "日本茼蒿": "veg:leaf",
   "娃娃菜": "veg:leaf",
   "甜菠菜": "veg:leaf",
-  "甜豆": "veg:leaf",
   "白菜(含千寶菜": "veg:leaf",
   "枸杞葉": "veg:leaf",
   "高腳白菜": "veg:leaf",
-  "芥藍菜": "veg:leaf",
   "西洋菜": "veg:leaf",
   "綠寶石萵苣": "veg:leaf",
   "野莧": "veg:leaf",
   "葉萵苣": "veg:leaf",
-  "紅蔥頭": "veg:leaf",
   "山葵菜": "veg:leaf",
   "廣島白菜": "veg:leaf",
   "甜豌豆": "veg:leaf",
-  "虎豆": "veg:leaf",
-  "西洋芹": "veg:leaf",
   "水菜": "veg:leaf",
   "油麥菜": "veg:leaf",
   "芥藍花": "veg:leaf",
@@ -1187,66 +1114,47 @@ const CROP_CATEGORY_MAP = {
   "萵苣(含紅葉萵苣": "veg:leaf",
   "番杏": "veg:leaf",
   "甜菜": "veg:leaf",
-  "蛇瓜": "veg:leaf",
   "綠莧": "veg:leaf",
   "鹿角萵苣": "veg:leaf",
   "檸檬香蜂草": "veg:leaf",
-  "蒜苗": "veg:leaf",
   "蜜雪兒白菜": "veg:leaf",
   "鵝白菜": "veg:leaf",
-  "小麥草": "veg:leaf",
   "白杏菜": "veg:leaf",
   "馬郁蘭": "veg:leaf",
   "酸模": "veg:leaf",
   "巴西利": "veg:leaf",
   "薺菜": "veg:leaf",
-  "野山菊": "veg:leaf",
   "高腳奶油白菜": "veg:leaf",
   "珍珠菜": "veg:leaf",
   "波士頓萵苣": "veg:leaf",
   "甜蘿蔓": "veg:leaf",
-  "水白菜": "veg:leaf",
   "食用玉米筍": "veg:leaf",
   "芥末菜": "veg:leaf",
   "油菜(含小松菜": "veg:leaf",
   "紅捲萵苣": "veg:leaf",
-  "巴蔘": "veg:leaf",
   "土人參": "veg:leaf",
   "琉璃苣": "veg:leaf",
   "油菜花": "veg:leaf",
-  "大頭菜": "veg:leaf",
-  "芥藍芽": "veg:leaf",
-  "蕎麥苗": "veg:leaf",
   "圓葉萵苣": "veg:leaf",
   "白莧": "veg:leaf",
   "全範圍": "veg:leaf",
   "刺芫荽": "veg:leaf",
   "牛奶白菜": "veg:leaf",
-  "葵花苗": "veg:leaf",
   "檸檬葉": "veg:leaf",
-  "鹿角A菜": "veg:leaf",
   "東京白菜": "veg:leaf",
   "蘿蔔葉": "veg:leaf",
-  "長梗青江菜": "veg:leaf",
   "忍冬": "veg:leaf",
   "月桂葉": "veg:leaf",
-  "冰菜": "veg:leaf",
   "紅莧": "veg:leaf",
   "綠捲萵苣": "veg:leaf",
   "白花菜": "veg:leaf",
   "葉用枸杞": "veg:leaf",
-  "甜芥菜": "veg:leaf",
   "龍骨瓣莕菜": "veg:leaf",
-  "甘藍嬰": "veg:leaf",
-  "巴西里": "veg:leaf",
-  "細香蔥": "veg:leaf",
   "豆瓣菜": "veg:leaf",
-  "粉薯": "veg:leaf",
   "綠寶萵苣": "veg:leaf",
   "尖葉萵苣": "veg:leaf",
   "莧菜(紅莧菜": "veg:leaf",
   "蕨菜": "veg:leaf",
-  "野莧菜": "veg:leaf",
   "酸漿": "veg:leaf",
   "甜蘿勒": "veg:leaf",
   "紅葉萵苣": "veg:leaf",
@@ -1254,22 +1162,16 @@ const CROP_CATEGORY_MAP = {
   "落葵": "veg:leaf",
   "火焰萵苣": "veg:leaf",
   "美味菜": "veg:leaf",
-  "魚腥草乾": "veg:leaf",
   "洋洛葵": "veg:leaf",
   "塔棵菜": "veg:leaf",
-  "乾杭菊": "veg:leaf",
   "打拋葉": "veg:leaf",
   "食茱萸": "veg:leaf",
-  "乾紫蘇": "veg:leaf",
   "牧草筍": "veg:leaf",
   "白菜(小白菜": "veg:leaf",
   "白菜(千寶菜": "veg:leaf",
   "萵苣(紅葉萵苣": "veg:leaf",
   "過貓蕨": "veg:leaf",
-  "乾魚腥草": "veg:leaf",
-  "嫩薑": "veg:leaf",
   "咖哩葉": "veg:leaf",
-  "黃洋蔥": "veg:leaf",
   "木虌果": "veg:leaf",
   "香芹": "veg:leaf",
   "澎湖絲瓜": "veg:leaf",
@@ -1281,41 +1183,23 @@ const CROP_CATEGORY_MAP = {
   "水蓮": "veg:leaf",
   "水芹菜": "veg:leaf",
   "向日葵": "veg:leaf",
-  "紅藜菜": "veg:leaf",
   "甜薰衣草": "veg:leaf",
-  "綠橡萵苣": "veg:leaf",
   "水芹": "veg:leaf",
   "白鶴靈芝草": "veg:leaf",
-  "紅藜葉": "veg:leaf",
-  "分蔥": "veg:leaf",
   "牛蕃茄": "veg:leaf",
   "昭和菜": "veg:leaf",
-  "粉薑": "veg:leaf",
   "甜肉桂": "veg:leaf",
-  "甜菜根乾": "veg:leaf",
-  "乾茴香": "veg:leaf",
   "通天草": "veg:leaf",
   "萵苣(A菜": "veg:leaf",
-  "芥藍芽菜": "veg:leaf",
-  "西芹": "veg:leaf",
   "廣島芥菜": "veg:leaf",
   "埃及國王菜": "veg:leaf",
   "蝦夷蔥": "veg:leaf",
   "紅松菜": "veg:leaf",
-  "乾薑": "veg:leaf",
-  "薄荷乾": "veg:leaf",
   "綠蘿蔓": "veg:leaf",
-  "雞心辣椒": "veg:leaf",
-  "角瓜": "veg:leaf",
-  "芽菜": "veg:leaf",
-  "羅美心": "veg:leaf",
   "沙拉白菜": "veg:leaf",
   "枸杞菜": "veg:leaf",
-  "土人蔘": "veg:leaf",
   "食用玫瑰": "veg:leaf",
-  "香蜂草乾": "veg:leaf",
   "小金英": "veg:leaf",
-  "角椒": "veg:leaf",
   "小茴香": "veg:leaf",
   "檸檬草": "veg:leaf",
   "翠白菜": "veg:leaf",
@@ -1325,56 +1209,67 @@ const CROP_CATEGORY_MAP = {
   "甘藍菜嬰": "veg:leaf",
   "甜萬壽菊": "veg:leaf",
   "甜白菜": "veg:leaf",
-  "乾薑黃": "veg:leaf",
-  "乾迷迭香": "veg:leaf",
-  "艾草乾": "veg:leaf",
   "九尾草": "veg:leaf",
-  "紅高麗苗": "veg:leaf",
   "金盞草": "veg:leaf",
-  "荷蘭芹": "veg:leaf",
-  "櫛瓜花": "veg:leaf",
-  "羅蔓萵苣": "veg:leaf",
   "沙巴蛇草": "veg:leaf",
-  "蘿蔔苗": "veg:leaf",
   "蘿美心萵苣": "veg:leaf",
   "東京娃娃菜": "veg:leaf",
-  "乾燥杭菊葉": "veg:leaf",
-  "甜菊粉": "veg:leaf",
-  "芳香萬壽菊粉": "veg:leaf",
-  "鼠尾草乾": "veg:leaf",
   "人蔘菜": "veg:leaf",
   "瑞士菠菜": "veg:leaf",
-  "球莖茴香": "veg:leaf",
   "尼龍白菜": "veg:leaf",
-  "紅洋蔥": "veg:leaf",
-  "紫高麗菜苗": "veg:leaf",
   "紫蘇葉": "veg:leaf",
   "莧菜(含白莧": "veg:leaf",
-  "大蔥": "veg:leaf",
   "巴蔘菜": "veg:leaf",
   "樹莓": "veg:leaf",
   "蘿美生菜": "veg:leaf",
   "藤三七": "veg:leaf",
   "山茼萵": "veg:leaf",
-  "乾山苦瓜": "veg:leaf",
-  "奧勒岡乾": "veg:leaf",
-  "乾香椿": "veg:leaf",
   "水蕹菜": "veg:leaf",
-  "四季蔥": "veg:leaf",
-  "韭黃": "veg:leaf",
-  "球甘藍苗": "veg:leaf",
-  "甜菜根苗": "veg:leaf",
-  "迷迭香乾": "veg:leaf",
   "甜心菜": "veg:leaf",
-  "紫高麗菜芽": "veg:leaf",
   "綠羽芥末菜": "veg:leaf",
-  "球莖甘藍(結球菜": "veg:leaf",
-  "小油菊乾": "veg:leaf",
-  "桂圓乾": "veg:leaf",
-  "乾燥小油菊": "veg:leaf",
   "齒薰衣草": "veg:leaf",
   "萵苣(含鹿角萵苣": "veg:leaf",
-  // veg:root (81)
+  "火焰菜": "veg:leaf",
+  "菜心": "veg:leaf",
+  "綠紫蘇": "veg:leaf",
+  "檸檬羅勒": "veg:leaf",
+  "紅地瓜葉": "veg:leaf", // sweet potato leaves, a common leafy vegetable
+  "貝比生菜": "veg:leaf", // baby leaf greens mix
+  // veg:root (85)
+  "青蔥": "veg:root",
+  "紅蔥頭": "veg:root",
+  "西洋芹": "veg:root",
+  "大頭菜": "veg:root",
+  "細香蔥": "veg:root",
+  "粉薯": "veg:root",
+  "嫩薑": "veg:root",
+  "黃洋蔥": "veg:root",
+  "分蔥": "veg:root",
+  "粉薑": "veg:root",
+  "西芹": "veg:root",
+  "球莖茴香": "veg:root",
+  "紅洋蔥": "veg:root",
+  "大蔥": "veg:root",
+  "四季蔥": "veg:root",
+  "韭黃": "veg:root",
+  "球莖甘藍(結球菜": "veg:root",
+  "菊薯": "veg:root",
+  "蕪菁": "veg:root",
+  "莖用芥菜": "veg:root",
+  "芥藍菜筍": "veg:root",
+  "芋頭梗": "veg:root",
+  "草石蠶": "veg:root",
+  "白蘆筍": "veg:root",
+  "檳榔心芋": "veg:root",
+  "韭蔥": "veg:root",
+  "蒜頭粒": "veg:root",
+  "高麗菜筍": "veg:root",
+  "粉蔥": "veg:root",
+  "彩色蘿蔔": "veg:root",
+  "白玉蘿蔔": "veg:root",
+  "人蔘山藥": "veg:root",
+  "日本山藥": "veg:root",
+  "甜茴香": "veg:root",
   "蘿蔔": "veg:root",
   "竹筍": "veg:root",
   "胡蘿蔔": "veg:root",
@@ -1403,60 +1298,77 @@ const CROP_CATEGORY_MAP = {
   "葛鬱金": "veg:root",
   "綠竹筍": "veg:root",
   "茭白筍": "veg:root",
-  "石篙筍": "veg:root",
   "甜龍筍": "veg:root",
-  "紅根甜菜": "veg:root",
   "荸薺": "veg:root",
   "竹薑": "veg:root",
-  "大蒜": "veg:root",
   "箭筍": "veg:root",
   "老薑": "veg:root",
-  "黑柿番茄": "veg:root",
-  "木薯": "veg:root",
-  "竹荀": "veg:root",
-  "菜心": "veg:root",
-  "芋莖": "veg:root",
   "山葵": "veg:root",
-  "芭樂葉": "veg:root",
-  "棗子": "veg:root",
   "紫蘆筍": "veg:root",
   "綠蘆筍": "veg:root",
-  "檸檬百里香": "veg:root",
   "黃金馬鈴薯": "veg:root",
-  "番石榴乾": "veg:root",
   "美人蕉": "veg:root",
   "桂竹": "veg:root",
-  "菜瓜": "veg:root",
   "葛根": "veg:root",
-  "乾蝶豆花": "veg:root",
-  "竹芋": "veg:root",
-  "乾檸檬香茅": "veg:root",
   "黃薑黃": "veg:root",
-  "生薑": "veg:root",
   "白茅": "veg:root",
-  "火蔥": "veg:root",
-  "芋頭莖": "veg:root",
-  "乾燥當歸": "veg:root",
-  "竹筍乾": "veg:root",
-  "香茅草": "veg:root",
-  "乾燥薑黃": "veg:root",
-  "綠紫蘇": "veg:root",
-  "檸檬羅勒": "veg:root",
-  "桃接李": "veg:root",
-  "覆盆子": "veg:root",
   "筍": "veg:root",
   "箭竹筍": "veg:root",
   "孟宗竹筍": "veg:root",
-  "鮮切有機南瓜": "veg:root",
   "鮮切有機山藥": "veg:root",
-  "乾燥仙草": "veg:root",
   "截切山藥": "veg:root",
-  "甜丁": "veg:root",
   "石篙竹筍": "veg:root",
   "蘆筍花": "veg:root",
-  "乾紅薑黃片": "veg:root",
-  "竹筍(石篙竹筍": "veg:root",
-  // veg:flowerfruit (104)
+  "菊芋": "veg:root", // Jerusalem artichoke - a root vegetable
+  "紫山藥": "veg:root", // purple yam - a root vegetable
+  // veg:flowerfruit (127)
+  "黑柿番茄": "veg:flowerfruit",
+  "鮮切有機南瓜": "veg:flowerfruit",
+  "甜丁": "veg:flowerfruit",
+  "青花椰": "veg:flowerfruit",
+  "白玉苦瓜": "veg:flowerfruit",
+  "大莢豌豆": "veg:flowerfruit",
+  "鵲豆": "veg:flowerfruit",
+  "紫花椰": "veg:flowerfruit",
+  "冬瓜分切": "veg:flowerfruit",
+  "蛋茄": "veg:flowerfruit",
+  "黑柿蕃茄": "veg:flowerfruit",
+  "截切冬瓜": "veg:flowerfruit",
+  "長辣椒": "veg:flowerfruit",
+  "小西瓜": "veg:flowerfruit",
+  "白玉米": "veg:flowerfruit",
+  "截切南瓜": "veg:flowerfruit",
+  "辣椒(青龍椒": "veg:flowerfruit",
+  "小辣椒": "veg:flowerfruit",
+  "大辣椒": "veg:flowerfruit",
+  "黑寶玉米": "veg:flowerfruit",
+  "玉女小蕃茄": "veg:flowerfruit",
+  "紅小辣椒": "veg:flowerfruit",
+  "圓茄": "veg:flowerfruit",
+  "紫玉米": "veg:flowerfruit",
+  "角豆": "veg:flowerfruit",
+  "小蕃茄": "veg:flowerfruit",
+  "大番茄": "veg:flowerfruit",
+  "南瓜分切": "veg:flowerfruit",
+  "紅鬚帶殼玉米筍": "veg:flowerfruit",
+  "糯米玉米": "veg:flowerfruit",
+  "蠶豆": "veg:flowerfruit",
+  "牛奶玉米": "veg:flowerfruit",
+  "短茄": "veg:flowerfruit",
+  "水果絲瓜": "veg:flowerfruit",
+  "截切大黃瓜": "veg:flowerfruit",
+  "截切花胡瓜": "veg:flowerfruit",
+  "截切小黃瓜": "veg:flowerfruit",
+  "截切扁蒲": "veg:flowerfruit",
+  "青花菜筍": "veg:flowerfruit",
+  "格蘭菜花": "veg:flowerfruit",
+  "碗豆": "veg:flowerfruit",
+  "紫花椰菜": "veg:flowerfruit",
+  "青花椰菜": "veg:flowerfruit",
+  "黃花芥藍": "veg:flowerfruit",
+  "香瓜茄": "veg:flowerfruit",
+  "甜油菜心": "veg:flowerfruit",
+  "糯米辣椒": "veg:flowerfruit",
   "南瓜": "veg:flowerfruit",
   "番茄": "veg:flowerfruit",
   "絲瓜": "veg:flowerfruit",
@@ -1503,7 +1415,6 @@ const CROP_CATEGORY_MAP = {
   "山苦瓜": "veg:flowerfruit",
   "菜豆": "veg:flowerfruit",
   "越瓜": "veg:flowerfruit",
-  "珠蔥": "veg:flowerfruit",
   "牛番茄": "veg:flowerfruit",
   "青龍椒": "veg:flowerfruit",
   "佛手瓜": "veg:flowerfruit",
@@ -1521,47 +1432,40 @@ const CROP_CATEGORY_MAP = {
   "羊角椒": "veg:flowerfruit",
   "荷蘭豆": "veg:flowerfruit",
   "蒲瓜": "veg:flowerfruit",
-  "糯玉米": "veg:flowerfruit",
-  "節瓜": "veg:flowerfruit",
   "刀豆": "veg:flowerfruit",
   "甜瓜": "veg:flowerfruit",
   "紅秋葵": "veg:flowerfruit",
   "蘋果絲瓜": "veg:flowerfruit",
   "木鱉子": "veg:flowerfruit",
   "桃太郎番茄": "veg:flowerfruit",
-  "青龍辣椒": "veg:flowerfruit",
-  "甜羅勒": "veg:flowerfruit",
   "紅鬚玉米筍": "veg:flowerfruit",
-  "紅辣椒": "veg:flowerfruit",
   "長豇豆": "veg:flowerfruit",
-  "人心果": "veg:flowerfruit",
   "金針花": "veg:flowerfruit",
-  "蜜棗": "veg:flowerfruit",
   "水果小黃瓜": "veg:flowerfruit",
-  "香草": "veg:flowerfruit",
-  "青辣椒": "veg:flowerfruit",
   "玉女番茄": "veg:flowerfruit",
-  "黃花椰菜": "veg:flowerfruit",
   "東昇南瓜": "veg:flowerfruit",
-  "乾辣椒": "veg:flowerfruit",
-  "風茹草": "veg:flowerfruit",
-  "乾洛神": "veg:flowerfruit",
   "玉米鬚": "veg:flowerfruit",
-  "碧玉筍": "veg:flowerfruit",
-  "乾甜菊": "veg:flowerfruit",
   "阿成南瓜": "veg:flowerfruit",
-  "印度棗": "veg:flowerfruit",
   "其他：玉米筍": "veg:flowerfruit",
-  "神香草": "veg:flowerfruit",
-  "夏威夷豆": "veg:flowerfruit",
-  "龍眼花": "veg:flowerfruit",
   "青苦瓜": "veg:flowerfruit",
-  "明尼桔柚": "veg:flowerfruit",
-  "牛膝": "veg:flowerfruit",
-  "晶圓梨": "veg:flowerfruit",
   "哈蜜瓜": "veg:flowerfruit",
-  "乾菊花": "veg:flowerfruit",
-  // veg:fungisprout (75)
+  // veg:fungisprout (82)
+  "甘藍菜苗": "veg:fungisprout",
+  "豌豆苗": "veg:fungisprout",
+  "小麥草": "veg:fungisprout",
+  "芥藍芽": "veg:fungisprout",
+  "蕎麥苗": "veg:fungisprout",
+  "葵花苗": "veg:fungisprout",
+  "甘藍嬰": "veg:fungisprout",
+  "芥藍芽菜": "veg:fungisprout",
+  "芽菜": "veg:fungisprout",
+  "紅高麗苗": "veg:fungisprout",
+  "蘿蔔苗": "veg:fungisprout",
+  "紫高麗菜苗": "veg:fungisprout",
+  "球甘藍苗": "veg:fungisprout",
+  "甜菜根苗": "veg:fungisprout",
+  "紫高麗菜芽": "veg:fungisprout",
+  "芥藍菜芽": "veg:fungisprout",
   "香菇": "veg:fungisprout",
   "木耳": "veg:fungisprout",
   "杏鮑菇": "veg:fungisprout",
@@ -1588,13 +1492,11 @@ const CROP_CATEGORY_MAP = {
   "蠔菇": "veg:fungisprout",
   "黑美人菇": "veg:fungisprout",
   "美白菇": "veg:fungisprout",
-  "段木香菇": "veg:fungisprout",
   "黑蠔菇": "veg:fungisprout",
   "鴻禧菇": "veg:fungisprout",
   "巴西蘑菇": "veg:fungisprout",
   "金滑菇": "veg:fungisprout",
   "雪菇": "veg:fungisprout",
-  "乾靈芝": "veg:fungisprout",
   "酒杯菇": "veg:fungisprout",
   "青花苗": "veg:fungisprout",
   "姬松茸": "veg:fungisprout",
@@ -1602,8 +1504,6 @@ const CROP_CATEGORY_MAP = {
   "白雪菇": "veg:fungisprout",
   "鮮香菇": "veg:fungisprout",
   "發芽黃豆": "veg:fungisprout",
-  "香菇乾": "veg:fungisprout",
-  "乾黑木耳": "veg:fungisprout",
   "蕎麥芽": "veg:fungisprout",
   "青花菜芽": "veg:fungisprout",
   "川耳": "veg:fungisprout",
@@ -1619,30 +1519,24 @@ const CROP_CATEGORY_MAP = {
   "山茶茸": "veg:fungisprout",
   "百靈菇": "veg:fungisprout",
   "小麥芽": "veg:fungisprout",
-  "木耳乾": "veg:fungisprout",
   "杏香菇": "veg:fungisprout",
   "黃豆胚芽": "veg:fungisprout",
   "黑豆胚芽": "veg:fungisprout",
-  "椴木乾香菇": "veg:fungisprout",
   "豌豆嬰": "veg:fungisprout",
   "紫高麗苗": "veg:fungisprout",
   "粉紅菇": "veg:fungisprout",
   "青花椰苗": "veg:fungisprout",
-  "靈芝乾": "veg:fungisprout",
-  "乾燥木耳": "veg:fungisprout",
   "鹿角靈芝": "veg:fungisprout",
   "紅扁豆芽": "veg:fungisprout",
   "青花菜苗": "veg:fungisprout",
   "黑珍珠菇": "veg:fungisprout",
   "雪耳": "veg:fungisprout",
-  "乾燥靈芝": "veg:fungisprout",
   "韓小菇": "veg:fungisprout",
-  // fruit:berry (76)
+  // fruit:berry (45)
+  "覆盆子": "fruit:berry",
   "香蕉": "fruit:berry",
   "木瓜": "fruit:berry",
-  "番石榴": "fruit:berry",
   "百香果": "fruit:berry",
-  "紅龍果": "fruit:berry",
   "酪梨": "fruit:berry",
   "草莓": "fruit:berry",
   "鳳梨": "fruit:berry",
@@ -1651,13 +1545,11 @@ const CROP_CATEGORY_MAP = {
   "蓮霧": "fruit:berry",
   "芭蕉": "fruit:berry",
   "桑椹": "fruit:berry",
-  "番荔枝": "fruit:berry",
   "楊桃": "fruit:berry",
   "葡萄": "fruit:berry",
   "波羅蜜": "fruit:berry",
-  "芭樂": "fruit:berry",
+  "番石榴": "fruit:berry",
   "嘉寶果": "fruit:berry",
-  "桑葚": "fruit:berry",
   "奇異果": "fruit:berry",
   "火龍果": "fruit:berry",
   "藍莓": "fruit:berry",
@@ -1666,55 +1558,37 @@ const CROP_CATEGORY_MAP = {
   "牛奶果": "fruit:berry",
   "紅毛丹": "fruit:berry",
   "石榴": "fruit:berry",
-  "釋迦": "fruit:berry",
+  "番荔枝": "fruit:berry",
   "榴槤": "fruit:berry",
   "芭樂芯": "fruit:berry",
   "山竹": "fruit:berry",
   "沙梨橄欖": "fruit:berry",
   "青木瓜": "fruit:berry",
-  "馬蜂橙": "fruit:berry",
   "金鑽鳳梨": "fruit:berry",
   "山刺番荔枝": "fruit:berry",
-  "李子": "fruit:berry",
   "鳳梨釋迦": "fruit:berry",
   "紅心芭樂": "fruit:berry",
-  "甜桔": "fruit:berry",
-  "白柿": "fruit:berry",
   "紅肉火龍果": "fruit:berry",
-  "菠蘿蜜": "fruit:berry",
-  "乾薄荷": "fruit:berry",
   "旦蕉": "fruit:berry",
-  "白肉火龍果": "fruit:berry",
-  "櫻花": "fruit:berry",
   "龍貢": "fruit:berry",
-  "甜橙": "fruit:berry",
-  "鰐梨": "fruit:berry",
-  "鳯梨釋迦": "fruit:berry",
-  "乾燥玫瑰花": "fruit:berry",
-  "紅肉柳丁": "fruit:berry",
-  "毛荔枝": "fruit:berry",
   "香瓜梨": "fruit:berry",
-  "無患子": "fruit:berry",
-  "佛利檬": "fruit:berry",
-  "晚崙西亞": "fruit:berry",
-  "海梨": "fruit:berry",
   "巴西櫻桃": "fruit:berry",
-  "澳洲胡桃": "fruit:berry",
-  "橘子": "fruit:berry",
-  "甜桃": "fruit:berry",
-  "乾燥桂花": "fruit:berry",
-  "乾香茅": "fruit:berry",
-  "筆柿": "fruit:berry",
-  "酸桔": "fruit:berry",
   "紅石榴": "fruit:berry",
-  "海梨柑": "fruit:berry",
   "蒲桃": "fruit:berry",
   "黃金山竹": "fruit:berry",
-  "阿里山油菊": "fruit:berry",
   "綠奇異果": "fruit:berry",
   "黑莓": "fruit:berry",
-  "可可果": "fruit:berry",
-  // fruit:citrus (39)
+  // fruit:citrus (49)
+  "馬蜂橙": "fruit:citrus",   // kaffir lime (Citrus hystrix) - a citrus species
+  "甜桔": "fruit:citrus",     // a sweet tangerine, like 桶柑/椪柑
+  "甜橙": "fruit:citrus",     // a sweet orange, like 柳丁/臍橙
+  "紅肉柳丁": "fruit:citrus", // blood-orange variant of 柳丁
+  "佛利檬": "fruit:citrus",   // same family as 佛利蒙柑, a mandarin cultivar
+  "晚崙西亞": "fruit:citrus", // Valencia orange, same as 晚崙西亞橙
+  "海梨": "fruit:citrus",     // an orange/mandarin cultivar, same family as 海梨柑
+  "海梨柑": "fruit:citrus",   // a mandarin cultivar
+  "橘子": "fruit:citrus",     // mandarin orange
+  "酸桔": "fruit:citrus",     // a sour tangerine
   "檸檬": "fruit:citrus",
   "柚子": "fruit:citrus",
   "柳橙": "fruit:citrus",
@@ -1754,7 +1628,12 @@ const CROP_CATEGORY_MAP = {
   "蜜柑": "fruit:citrus",
   "晚崙西亞橙": "fruit:citrus",
   "紅文旦": "fruit:citrus",
-  // fruit:stonepome (23)
+  // fruit:stonepome (30)
+  "桃接李": "fruit:stonepome",
+  "李子": "fruit:stonepome",  // plum, same as 李
+  "白柿": "fruit:stonepome",  // a persimmon cultivar, same as 柿
+  "筆柿": "fruit:stonepome",  // a persimmon cultivar, same as 柿
+  "甜桃": "fruit:stonepome",  // a peach cultivar, same as 桃/水蜜桃
   "梅": "fruit:stonepome",
   "芒果": "fruit:stonepome",
   "龍眼": "fruit:stonepome",
@@ -1778,7 +1657,14 @@ const CROP_CATEGORY_MAP = {
   "桃子": "fruit:stonepome",
   "黃肉李": "fruit:stonepome",
   "蜜李": "fruit:stonepome",
-  // processed (363)
+  "柿子": "fruit:stonepome",
+  "沙梨": "fruit:stonepome", // sand pear (Pyrus pyrifolia), a pear species/synonym, not "other"
+  // processed (342)
+  "甜菊粉": "processed",
+  "芳香萬壽菊粉": "processed",
+  "小菊花": "processed",
+  "乾燥蒜頭": "processed",
+  "咸豐草乾": "processed",
   "紅棗": "processed",
   "枸杞": "processed",
   "乾香菇": "processed",
@@ -1789,7 +1675,6 @@ const CROP_CATEGORY_MAP = {
   "洛神葵乾": "processed",
   "芭樂乾": "processed",
   "檸檬乾": "processed",
-  "杏仁": "processed",
   "法國進口有機手工長棍": "processed",
   "菊花": "processed",
   "砂糖": "processed",
@@ -1808,7 +1693,6 @@ const CROP_CATEGORY_MAP = {
   "奇亞籽": "processed",
   "燕麥粉": "processed",
   "決明子": "processed",
-  "松子": "processed",
   "三色藜麥": "processed",
   "全麥麵粉": "processed",
   "大燕麥片": "processed",
@@ -1890,7 +1774,6 @@ const CROP_CATEGORY_MAP = {
   "紫蘇乾": "processed",
   "印加果仁": "processed",
   "乾猴頭菇": "processed",
-  "苦瓜乾": "processed",
   "亞麻仁籽": "processed",
   "大紅棗": "processed",
   "玫瑰花茶": "processed",
@@ -1899,12 +1782,8 @@ const CROP_CATEGORY_MAP = {
   "黑芝麻醬": "processed",
   "麥芽糖": "processed",
   "蕎麥粉": "processed",
-  "紅糯米": "processed",
-  "柿子": "processed",
-  "蒜": "processed",
   "乾燥迷迭香": "processed",
   "乾燥芳香萬壽菊": "processed",
-  "糯米": "processed",
   "甜菊乾": "processed",
   "山苦瓜乾": "processed",
   "玉米粉": "processed",
@@ -1913,14 +1792,12 @@ const CROP_CATEGORY_MAP = {
   "山苦瓜茶包": "processed",
   "黑芝麻粒": "processed",
   "玉米粒": "processed",
-  "糙米米粉": "processed",
   "甘草": "processed",
   "中低筋麵粉": "processed",
   "莧籽": "processed",
   "乾燥印加果": "processed",
   "白朮": "processed",
   "乾芳香萬壽菊": "processed",
-  "椴木香菇": "processed",
   "葛鬱金粉": "processed",
   "檸檬原汁": "processed",
   "黑木耳乾": "processed",
@@ -1949,13 +1826,6 @@ const CROP_CATEGORY_MAP = {
   "桂花乾": "processed",
   "九層塔粉": "processed",
   "菠菜粉": "processed",
-  "耶加雪夫": "processed",
-  "哥倫比亞": "processed",
-  "多明尼加": "processed",
-  "墨西哥": "processed",
-  "秘魯": "processed",
-  "瓜地馬拉": "processed",
-  "宏都拉斯": "processed",
   "紅米": "processed",
   "玄米茶": "processed",
   "糙米醋": "processed",
@@ -1982,12 +1852,6 @@ const CROP_CATEGORY_MAP = {
   "丹參粉": "processed",
   "長秈白米": "processed",
   "木棉豆腐": "processed",
-  "藍山": "processed",
-  "曼巴": "processed",
-  "義大利": "processed",
-  "義式": "processed",
-  "玻利維亞": "processed",
-  "法式": "processed",
   "乾燥黑豆": "processed",
   "枸杞子": "processed",
   "冷凍芋頭塊": "processed",
@@ -2020,7 +1884,6 @@ const CROP_CATEGORY_MAP = {
   "絹豆腐": "processed",
   "五穀米": "processed",
   "花椰菜乾": "processed",
-  "曼特寧": "processed",
   "洛神花粉": "processed",
   "蘋果乾": "processed",
   "甜菊葉": "processed",
@@ -2106,7 +1969,6 @@ const CROP_CATEGORY_MAP = {
   "酸高麗菜": "processed",
   "無糖豆漿": "processed",
   "乾燥肉桂": "processed",
-  "巴布亞紐幾內亞": "processed",
   "黑木耳露": "processed",
   "大麥片": "processed",
   "麵粉": "processed",
@@ -2116,7 +1978,6 @@ const CROP_CATEGORY_MAP = {
   "菠菜米餅": "processed",
   "南瓜米餅": "processed",
   "香蕉米餅": "processed",
-  "葱": "processed",
   "藍藻錠": "processed",
   "鳳梨醋": "processed",
   "檸檬醋": "processed",
@@ -2129,8 +1990,6 @@ const CROP_CATEGORY_MAP = {
   "芭樂果乾": "processed",
   "地瓜泥": "processed",
   "鳳梨果醬": "processed",
-  "尼加拉瓜": "processed",
-  "厄瓜多": "processed",
   "丁香": "processed",
   "碾製米(白米": "processed",
   "青江菜粉": "processed",
@@ -2139,7 +1998,31 @@ const CROP_CATEGORY_MAP = {
   "枸杞粉": "processed",
   "特級初榨橄欖油": "processed",
   "枸杞濃縮汁": "processed",
-  // other (182)
+  "香茅乾": "processed", // dried lemongrass - matches 乾檸檬香茅/乾燥檸檬香茅
+  "乾桂花": "processed", // dried osmanthus - matches 乾燥桂花
+  "乾金針": "processed", // dried daylily - a processed dried food, like other 乾 items
+  "乾枸杞": "processed", // dried goji - matches 枸杞/枸杞乾/枸杞子
+  // other (183)
+  "芭樂葉": "other",
+  "檸檬百里香": "other",
+  "櫻花": "other",            // cherry blossom - an ornamental flower, not a fruit
+  "無患子": "other",          // soapberry - not eaten as fruit, used for soap nuts
+  "阿里山油菊": "other",      // a chrysanthemum grown for tea, same family as 油菊
+  "歐芹": "other",
+  "鳳梨鼠尾草": "other",
+  "馬鬱蘭": "other",
+  "當歸葉": "other",
+  "鴨兒芹": "other",
+  "野人參": "other",
+  "桋梧": "other",
+  "蟛蜞菊": "other",
+  "紫錐": "other",
+  "苦楝": "other",
+  "巧克力薄荷": "other",
+  "斑蘭葉": "other",
+  "蓮蓬": "other",
+  "食用花卉(玫瑰花": "other",
+  "山肉桂": "other",
   "洛神葵": "other",
   "薑黃": "other",
   "薄荷": "other",
@@ -2201,7 +2084,6 @@ const CROP_CATEGORY_MAP = {
   "奧勒岡": "other",
   "可可": "other",
   "食用百合": "other",
-  "南瓜子": "other",
   "仙桃": "other",
   "馬鞭草": "other",
   "蓮子": "other",
@@ -2232,7 +2114,6 @@ const CROP_CATEGORY_MAP = {
   "七葉蘭": "other",
   "天竺葵": "other",
   "紅薑黃": "other",
-  "蒔蘿": "other",
   "金線蓮": "other",
   "馬告": "other",
   "愛玉": "other",
@@ -2241,10 +2122,8 @@ const CROP_CATEGORY_MAP = {
   "接骨木": "other",
   "山當歸": "other",
   "晚香玉": "other",
-  "蓮花": "other",
   "到手香": "other",
   "蒲公英": "other",
-  "乾金針": "other",
   "蔬果乾": "other",
   "油茶籽": "other",
   "黃藤": "other",
@@ -2262,37 +2141,28 @@ const CROP_CATEGORY_MAP = {
   "黃花蜜菜": "other",
   "台灣土肉桂": "other",
   "肉桂葉": "other",
-  "茉莉": "other",
   "車前草": "other",
-  "花豆": "other",
   "雨來菇": "other",
   "芋頭冬瓜": "other",
   "雷公根": "other",
   "玫瑰天竺葵": "other",
   "苜蓿": "other",
   "七葉膽": "other",
-  "沙梨": "other",
   "假酸漿": "other",
   "益母草": "other",
   "油甘果": "other",
   "樹番茄": "other",
   "薄荷葉": "other",
-  "矢車菊": "other",
   "香蘭葉": "other",
-  "紫米": "other",
   "廣藿香": "other",
   "枇杷葉": "other",
-  "菊芋": "other",
-  "乾枸杞": "other",
   "大花咸豐草": "other",
   "香草莢": "other",
-  "乾燥魚腥草": "other",
   "人參果": "other",
   "桑椹葉": "other",
   "黨參": "other",
   "油柑": "other",
   "石斛": "other",
-  "棉花": "other",
   "白粗康": "other",
   "苦茶樹": "other",
   "土肉桂葉": "other",
@@ -2305,7 +2175,6 @@ const CROP_CATEGORY_MAP = {
   "南非葉": "other",
   "紅紫蘇": "other",
   "辣木葉": "other",
-  "貢菊": "other",
   "油芒": "other",
   "香蕉花": "other",
   "荊芥": "other",
@@ -2313,15 +2182,10 @@ const CROP_CATEGORY_MAP = {
   "皇菊": "other",
   "苦茶菓": "other",
   "紅花": "other",
-  "肉桂葉乾": "other",
-  "紅地瓜葉": "other",
   "魚針草": "other",
   "茵陳蒿": "other",
   "沉香": "other",
-  "貝比生菜": "other",
-  "紫山藥": "other",
   "大黃": "other",
-  "苧麻": "other",
 };
 
 // Data-driven crop -> leaf-category attribution: since ContainCrops is each
