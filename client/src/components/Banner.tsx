@@ -51,7 +51,7 @@ export default function Banner() {
   }
 
   return (
-    <header className="sticky top-0 z-[60] border-b border-line bg-paper">
+    <header className="sticky top-0 z-[9999] border-b border-line bg-paper">
       <div className="mx-auto flex max-w-[1080px] items-center gap-4.5 px-8 py-3.5 max-[720px]:px-4.5">
         <Link to="/" className="flex flex-none items-center gap-2.5">
           <img

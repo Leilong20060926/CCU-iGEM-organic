@@ -64,3 +64,11 @@ h1, h2, h3, .display {
 .card-shadow {
   box-shadow: 0 6px 18px rgba(51, 44, 28, 0.1);
 }
+
+.leaflet-control-container,
+.leaflet-top,
+.leaflet-bottom,
+.leaflet-control,
+.leaflet-control-attribution {
+  z-index: 1 !important;
+}
