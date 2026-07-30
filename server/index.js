@@ -295,7 +295,7 @@ app.get("/api/organic", async (req, res) => {
       certType,
     } = req.query;
     const page = Math.max(1, Number(req.query.page) || 1);
-    const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
+    const pageSize = Math.min(1600, Math.max(1, Number(req.query.pageSize) || 20));
 
     if (!SORTABLE_FIELDS.includes(sortBy)) {
       return res.status(400).json({

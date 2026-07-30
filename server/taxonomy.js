@@ -179,6 +179,7 @@ const CROP_NAME_BLOCKLIST = new Set([
   "耶加雪夫", "哥倫比亞", "多明尼加", "墨西哥", "秘魯", "瓜地馬拉",
   "宏都拉斯", "藍山", "曼巴", "義大利", "義式", "玻利維亞", "法式",
   "曼特寧", "巴布亞紐幾內亞", "尼加拉瓜", "厄瓜多",
+  "酸漿果","海梨橙",
 ]);
 
 // --- Manual crop corrections --------------------------------------------
@@ -206,6 +207,32 @@ const CERT_STATUS_SUFFIX = /[-－](有機轉型期|轉型期有機|有機|轉型
 // prefix above and trailing punctuation) -> canonical display name. Use this
 // to merge spelling variants / synonyms into a single crop tile.
 const CROP_ALIASES = {
+  "白雪菇": "雪白菇",
+  "黑蠔菇": "黑美人菇",
+  "小黃瓜": "花胡瓜",
+  "洛神花乾": "洛神葵乾",
+  "印度棗": "棗",
+  "苦茶": "油茶",
+  "紅石榴": "石榴",
+  "芭樂芯": "番石榴",
+  "星蘋果": "牛奶果",
+  "甜豆": "豌豆",
+  "山苦瓜": "苦瓜",
+  "甜玉米": "玉米",
+  "大黃瓜": "胡瓜",
+  "哈密瓜": "洋香瓜",
+  "茭白筍": "筊白筍",
+  "金時地瓜": "栗子地瓜",
+  "米碾製品": "碾製米",
+  "蜜棗": "棗",
+  "甜桃": "桃",
+  "甜柿": "柿",
+  "蜜李": "李",
+  "紅文旦": "文旦",
+  "佛利檬": "佛利蒙柑",
+  "黃金包心白菜": "黃金白菜",
+  "葉菜甘藷": "地瓜葉",
+  "澳洲胡桃": "胡桃",
   "白毫烏龍": "烏龍茶",
   "薑粉": "薑黃粉",
   "大白柚": "白柚",
@@ -225,10 +252,10 @@ const CROP_ALIASES = {
   // Same thing ("rice, milled") written four different ways in the source
   // data - some fragments even missing the leading "米" entirely, likely
   // from the field being split on "、" mid-phrase upstream.
-  "米[碾製品]": "米碾製品",
-  "米(碾製品)": "米碾製品",
-  "其碾製品": "米碾製品",
-  "碾製品": "米碾製品",
+  "米[碾製品]": "碾製米",
+  "米(碾製品)": "碾製米",
+  "其碾製品": "碾製米",
+  "碾製品": "碾製米",
   // Confirmed synonyms / character variants found by auditing the real
   // dataset - same crop, different spelling, not wrapped in a bracket so
   // stripBracketedContent doesn't catch them.
@@ -869,8 +896,10 @@ const CROP_CATEGORY_MAP = {
   "乾紅藜": "staple",
   "黃地瓜": "staple",
   "紅地瓜": "staple",
+  "關刀豆": "stable",
   "花豆": "staple", // a bean/legume, like other 雜糧 beans
   // special (46)
+  "薄荷": "special",
   "咖啡鮮果": "special",
   "茶菁": "special",
   "澳洲茶樹": "special",
@@ -910,7 +939,6 @@ const CROP_CATEGORY_MAP = {
   "綠薄荷": "special",
   "胡椒薄荷": "special",
   "芡實": "special",
-  "關刀豆": "special",
   "澳洲胡桃": "special",      // macadamia nut, alongside 核桃/腰果/杏仁/夏威夷豆
   "可可果": "special",        // cacao pod, alongside 茶/咖啡 as a beverage/special crop
   "松子": "special", // pine nut - a tree nut, consistent with 核桃/腰果/榛果
@@ -1452,7 +1480,6 @@ const CROP_CATEGORY_MAP = {
   // veg:fungisprout (82)
   "甘藍菜苗": "veg:fungisprout",
   "豌豆苗": "veg:fungisprout",
-  "小麥草": "veg:fungisprout",
   "芥藍芽": "veg:fungisprout",
   "蕎麥苗": "veg:fungisprout",
   "葵花苗": "veg:fungisprout",
@@ -1578,6 +1605,7 @@ const CROP_CATEGORY_MAP = {
   "黃金山竹": "fruit:berry",
   "綠奇異果": "fruit:berry",
   "黑莓": "fruit:berry",
+  "西印度櫻桃": "fruit:berry",
   // fruit:citrus (49)
   "馬蜂橙": "fruit:citrus",   // kaffir lime (Citrus hystrix) - a citrus species
   "甜桔": "fruit:citrus",     // a sweet tangerine, like 桶柑/椪柑
@@ -1653,7 +1681,6 @@ const CROP_CATEGORY_MAP = {
   "甜柿": "fruit:stonepome",
   "椰棗": "fruit:stonepome",
   "梅子": "fruit:stonepome",
-  "西印度櫻桃": "fruit:stonepome",
   "桃子": "fruit:stonepome",
   "黃肉李": "fruit:stonepome",
   "蜜李": "fruit:stonepome",
@@ -2025,7 +2052,6 @@ const CROP_CATEGORY_MAP = {
   "山肉桂": "other",
   "洛神葵": "other",
   "薑黃": "other",
-  "薄荷": "other",
   "印加果": "other",
   "魚腥草": "other",
   "香茅": "other",

@@ -27,6 +27,7 @@ export default function OperatorListPage() {
   const q = searchParams.get("q") ?? "";
   const county = searchParams.get("county") ?? "";
   const page = Number(searchParams.get("page")) || 1;
+  const pageSize = Number(searchParams.get("pageSize")) || 40;
   const sortBy = (searchParams.get("sortBy") as SortField) || "Name";
   const order = (searchParams.get("order") as "asc" | "desc") || "asc";
   const status = searchParams.get("status") ?? "all";
@@ -44,7 +45,7 @@ export default function OperatorListPage() {
     setLoading(true);
     listOperators({
       page,
-      pageSize: 20,
+      pageSize,
       sortBy: sortBy === ("county" as SortField) ? "Address" : sortBy,
       order,
       search: q || undefined,
@@ -60,7 +61,7 @@ export default function OperatorListPage() {
         setResult({ ...res, data: sorted });
       })
       .finally(() => setLoading(false));
-  }, [catId, sub, activeCrop, county, page, sortBy, order, status, certType, q]);
+  }, [catId, sub, activeCrop, county, page, pageSize, sortBy, order, status, certType, q]);
 
   function update(patch: Record<string, string>) {
     const next = new URLSearchParams(searchParams);
@@ -69,7 +70,9 @@ export default function OperatorListPage() {
       else next.delete(k);
     });
     if (!("page" in patch)) next.delete("page");
-    setSearchParams(next);
+
+    const replace = Object.keys(patch).some((key) => key !== "page");
+    setSearchParams(next, { replace });
   }
 
   const backTo = catId ? (sub ? `/category/${catId}/${sub}` : cat?.subs ? `/category/${catId}` : `/category/${catId}/crops`) : "/";
@@ -116,9 +119,9 @@ export default function OperatorListPage() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-[12.5px] text-ink-soft">
-        <span>{lang === "zh" ? "排序" : "Sort"}:</span>
+        <span className="text-[12.5px]">{lang === "zh" ? "排序" : "Sort"}:</span>
         <select
-          className="rounded-full border border-line bg-surface px-3 py-1.5"
+          className="text-[12.5px] rounded-full border border-line bg-surface px-3 py-1.5"
           value={sortBy}
           onChange={(e) => update({ sortBy: e.target.value })}
         >
@@ -129,11 +132,24 @@ export default function OperatorListPage() {
           ))}
         </select>
         <button
-          className="rounded-full border border-line bg-surface px-3 py-1.5"
+          className="text-[12.5px] rounded-full border border-line bg-surface px-3 py-1.5"
           onClick={() => update({ order: order === "asc" ? "desc" : "asc" })}
         >
           {order === "asc" ? "↑" : "↓"}
         </button>
+        <span className="mr-1 text-[12.5px] text-ink-soft">{lang === "zh" ? "顯示" : "Show"}</span>
+        <select
+          className="text-[12.5px] rounded-full border border-line bg-surface px-3 py-1.5"
+          value={pageSize}
+          onChange={(e) => update({ pageSize: e.target.value })}
+        >
+          {[8, 20, 40, 80, 160, 400, 800, 1600].map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </select>
+        <span className="text-[12.5px] text-ink-soft">{lang === "zh" ? "筆" : "items"}</span>
         {county && (
           <span className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-both-soft px-3 py-1.5 text-both">
             {county}

@@ -19,13 +19,13 @@ export default function Home() {
               <>
                 查詢全台認證的
                 <br />
-                有機好食材
+                有機友善好食材
               </>
             ) : (
               <>
                 Find certified organic
                 <br />
-                produce you can trust
+                & friendly produce you can trust
               </>
             )}
           </h1>

@@ -7,13 +7,12 @@ import type { ReactNode } from "react";
 // (deep link, refresh, new tab) where "back" would leave the site.
 export default function BackLink({ to, children }: { to: string; children: ReactNode }) {
   const navigate = useNavigate();
-  const hasInAppHistory = typeof window !== "undefined" && (window.history.state?.idx ?? 0) > 0;
 
   function handleClick() {
     // Derive the visible label from children and use it to decide behavior.
     // If the label clearly indicates "home" (e.g. "回首頁" / "Back to home"),
     // always navigate to the provided `to` (typically `/`). Otherwise prefer
-    // navigating back in history when available so filters/pagination survive.
+    // using browser history so the user truly returns to the previous page.
     const label = React.Children.toArray(children)
       .map((c) => (typeof c === "string" ? c : (c as any)?.props?.children ?? ""))
       .join("")
@@ -27,8 +26,8 @@ export default function BackLink({ to, children }: { to: string; children: React
       return;
     }
 
-    if (hasInAppHistory) {
-      navigate(-1);
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      window.history.back();
     } else {
       navigate(to);
     }
