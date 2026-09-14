@@ -1,5 +1,16 @@
 # Taiwan Organic Agriculture Map
 
+> **iGEM Software Submission notice:** this repository (`main` branch) hosts the full source
+> code of our team's software tool for the **Software & AI** village / **Best Software** award.
+> A [release](https://docs.gitlab.com/ee/user/project/releases/) will be automatically created
+> at the Wiki Freeze as the judging artifact. See the
+> [Software Project](https://teams.igem.org/go/deliverables/software) page for full requirements.
+>
+> **Using an AI assistant (e.g. Claude Code)?** Please read
+> [.claude/RESPONSIBLE_AI_USE.md](.claude/RESPONSIBLE_AI_USE.md) first. You remain fully
+> responsible for everything you commit: don't misrepresent what your tool does, never commit
+> secrets, and review every change.
+
 Taiwan Organic Agriculture Map (CCU-iGEM-organic) is a more user-friendly search platform built on top of Taiwan's official organic / eco-friendly farming operator API, helping the public easily find organic and eco-friendly farming sellers across Taiwan.
 
 **Live demo:** https://igem.xn--hrr.tw/
@@ -42,8 +53,8 @@ Technical notes for anyone working on the codebase.
 ### Getting Started
 
 ```bash
-git clone https://github.com/Leilong20060926/CCU-iGEM-organic.git
-cd CCU-iGEM-organic
+git clone https://gitlab.igem.org/2026/software/ccu-taiwan/toam.git
+cd toam
 docker compose up -d
 ```
 
@@ -55,3 +66,7 @@ Once running:
 ### Data source
 
 - Taiwan MOA Friendly Farming & Organic Agriculture open data: https://epv.afa.gov.tw/
+
+## License
+
+This repository is licensed under the [Apache License 2.0](LICENSE).
